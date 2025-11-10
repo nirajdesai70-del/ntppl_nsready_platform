@@ -1,0 +1,68 @@
+version: "3.9"
+
+services:
+  admin_tool:
+    build:
+      context: ./admin_tool
+      dockerfile: Dockerfile
+    container_name: admin_tool
+    env_file:
+      - ./.env
+    environment:
+      - SERVICE_NAME=admin_tool
+      - SERVICE_PORT=8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - nats
+    restart: unless-stopped
+
+  collector_service:
+    build:
+      context: ./collector_service
+      dockerfile: Dockerfile
+    container_name: collector_service
+    env_file:
+      - ./.env
+    environment:
+      - SERVICE_NAME=collector_service
+      - SERVICE_PORT=8001
+    ports:
+      - "8001:8001"
+    depends_on:
+      - db
+      - nats
+    restart: unless-stopped
+
+  db:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    container_name: nsready_db
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: nsready_nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    restart: unless-stopped
+
+volumes:
+  db_data:
+    name: nsready_db_data
+
+

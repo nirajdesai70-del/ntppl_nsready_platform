@@ -1,0 +1,41 @@
+{
+  "project_id": "550e8400-e29b-41d4-a716-446655440000",
+  "site_id": "550e8400-e29b-41d4-a716-446655440001",
+  "device_id": "550e8400-e29b-41d4-a716-446655440002",
+  "metrics": [
+    {
+      "parameter_key": "voltage",
+      "value": 230.5,
+      "quality": 192,
+      "attributes": {
+        "unit": "V",
+        "source": "meter_1"
+      }
+    },
+    {
+      "parameter_key": "current",
+      "value": 10.2,
+      "quality": 192,
+      "attributes": {
+        "unit": "A"
+      }
+    },
+    {
+      "parameter_key": "power",
+      "value": 2351.1,
+      "quality": 192,
+      "attributes": {
+        "unit": "W"
+      }
+    }
+  ],
+  "protocol": "GPRS",
+  "source_timestamp": "2024-01-15T10:30:00Z",
+  "config_version": "v1.2",
+  "event_id": "device-001-20240115-103000",
+  "metadata": {
+    "firmware_version": "1.0.3",
+    "signal_strength": -85
+  }
+}
+

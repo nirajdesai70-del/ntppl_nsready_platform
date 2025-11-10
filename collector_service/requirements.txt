@@ -1,0 +1,8 @@
+fastapi==0.115.4
+uvicorn[standard]==0.32.0
+nats-py==2.7.2
+SQLAlchemy[asyncio]==2.0.36
+asyncpg==0.29.0
+prometheus-client==0.21.0
+pydantic==2.9.2
+

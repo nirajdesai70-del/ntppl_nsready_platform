@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# Docker
+.env
+.env.*
+docker-compose.override.yml
+
+# Editors / IDE
+.vscode/
+.idea/
+.cursor/
+.history/
+
+# Coverage / test
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+
