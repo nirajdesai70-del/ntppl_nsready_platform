@@ -20,6 +20,11 @@ This folder contains all NSReady backend services and infrastructure.
   - Schema migrations
   - Views and stored procedures
 
+- **`dashboard/`** - NSReady Data Collection Dashboard
+  - Internal operational UI for data collection work
+  - For engineers and administrators
+  - Lightweight dashboard for NSReady data visualization
+
 - **`tests/`** - Backend test suites
   - Regression tests
   - Performance tests
