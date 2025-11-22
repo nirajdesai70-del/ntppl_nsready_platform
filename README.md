@@ -27,6 +27,7 @@ ntppl_nsready_platform/
 │   ├── admin_tool/          # NSReady: Configuration management API (FastAPI, port 8000)
 │   ├── collector_service/   # NSReady: Telemetry ingestion service (FastAPI, port 8001)
 │   ├── db/                  # NSReady: Database schema, migrations, and TimescaleDB setup
+│   ├── dashboard/           # NSReady: Data collection dashboard (internal operational UI)
 │   └── tests/               # NSReady: Backend tests (regression, performance, resilience)
 │
 ├── nsware_frontend/
@@ -54,7 +55,7 @@ The NSReady backend is split across three main services:
   - Customer, project, site, device management
   - Parameter template management
   - Registry versioning and publishing
-  - **Note:** NSReady has a small internal operational dashboard (UI/templates) under `nsready_backend/admin_tool/ui/` for engineers and administrators. This is separate from NSWare's full SaaS dashboard.
+  - **Note:** NSReady has a small internal operational dashboard for data collection work under `nsready_backend/dashboard/` for engineers and administrators. This is separate from NSWare's full SaaS dashboard.
   
 - **`nsready_backend/collector_service/`** - Telemetry ingestion service
   - REST API for event ingestion
@@ -129,11 +130,11 @@ NSWare will provide enhanced operational dashboards and analytics capabilities.
 **Critical Distinction:**
 
 - **NSReady Operational Dashboard** (Current, Internal)
-  - Location: `nsready_backend/admin_tool/ui/` (or `nsready_backend/admin_tool/templates/`)
-  - Purpose: Lightweight internal UI for engineers/administrators
-  - Technology: Simple HTML/JavaScript, served by FastAPI
+  - Location: `nsready_backend/dashboard/`
+  - Purpose: Lightweight internal UI for engineers/administrators - data collection dashboard work
+  - Technology: React/TypeScript or similar (for NSReady data collection visualization)
   - Authentication: Bearer token (simple)
-  - Status: Current / In design
+  - Status: Current / In development
 
 - **NSWare Dashboard** (Future, Full SaaS Platform)
   - Location: `nsware_frontend/frontend_dashboard/`
