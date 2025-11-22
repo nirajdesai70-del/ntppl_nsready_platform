@@ -71,8 +71,8 @@ This index provides a complete map of all NSReady Dashboard and Platform documen
   _Location: `11_Testing_Strategy_and_Test_Suite_Overview.md`_  
   Testing approach, test suite organization, regression tests, performance tests, and resilience tests.
 
-- **12 – API Developer Manual**  
-  _Status: To be rebuilt_  
+- **12 – API Developer Manual** ✅  
+  _Location: `12_API_Developer_Manual.md`_  
   NSReady API endpoints, authentication, request/response formats, and developer integration guide.
 
 - **13 – Operational Checklist & Runbook**  
