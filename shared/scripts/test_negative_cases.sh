@@ -407,7 +407,7 @@ RESP=$(curl -s -w "\n%{http_code}" -X POST "$INGEST_URL" \
   --data-binary '{"invalid": json}' 2>&1)
 
 HTTP_CODE=$(echo "$RESP" | tail -1)
-RESP_BODY=$(echo "$RESP" | head -n -1)
+RESP_BODY=$(echo "$RESP" | sed -e '$d')
 
 echo "**Test: Malformed JSON**" >> "$REPORT"
 echo "- Payload: \`{\"invalid\": json}\`" >> "$REPORT"
@@ -432,7 +432,7 @@ RESP=$(curl -s -w "\n%{http_code}" -X POST "$INGEST_URL" \
   --data-binary '' 2>&1)
 
 HTTP_CODE=$(echo "$RESP" | tail -1)
-RESP_BODY=$(echo "$RESP" | head -n -1)
+RESP_BODY=$(echo "$RESP" | sed -e '$d')
 
 echo "**Test: Empty request body**" >> "$REPORT"
 echo "- Payload: (empty)" >> "$REPORT"
