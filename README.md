@@ -46,6 +46,7 @@ The NSReady backend is split across three main services:
   - Customer, project, site, device management
   - Parameter template management
   - Registry versioning and publishing
+  - **Note:** NSReady has a small internal operational dashboard (UI/templates) under `admin_tool/` for engineers and administrators. This is separate from NSWare's full SaaS dashboard.
   
 - **`collector_service/`** - Telemetry ingestion service
   - REST API for event ingestion
@@ -111,6 +112,26 @@ NSWare will provide enhanced operational dashboards and analytics capabilities.
 - Advanced analytics and reporting
 - Extended configuration management
 - Real-time monitoring and alerting
+
+### Important: NSReady UI vs NSWare Dashboard
+
+**Critical Distinction:**
+
+- **NSReady Operational Dashboard** (Current, Internal)
+  - Location: `admin_tool/ui/` (or `admin_tool/templates/`) - under NSReady backend
+  - Purpose: Lightweight internal UI for engineers/administrators
+  - Technology: Simple HTML/JavaScript, served by FastAPI
+  - Authentication: Bearer token (simple)
+  - Status: Current / In design
+
+- **NSWare Dashboard** (Future, Full SaaS Platform)
+  - Location: `frontend_dashboard/` (future: `nsware_frontend/frontend_dashboard/`)
+  - Purpose: Full industrial platform UI for multi-tenant SaaS operations
+  - Technology: React/TypeScript, separate service
+  - Authentication: Full stack (JWT, RBAC, MFA)
+  - Status: Future / Planned
+
+**See `master_docs/NSREADY_VS_NSWARE_DASHBOARD_CLARIFICATION.md` for full details.**
 
 **Note:** NSWare components are in development. See `master_docs/NSWARE_DASHBOARD_MASTER.md` for current status.
 
