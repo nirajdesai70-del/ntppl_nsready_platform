@@ -1,0 +1,37 @@
+{
+  "project_id": "8212caa2-b928-4213-b64e-9f5b86f4cad1",
+  "site_id": "89a66770-bdcc-4c95-ac97-e1829cb7a960",
+  "device_id": "bc2c5e47-f17e-46f0-b5e7-76b214f4f6ad",
+  "protocol": "GPRS",
+  "source_timestamp": "2025-11-14T12:00:00Z",
+  "metrics": [
+    {
+      "parameter_key": "voltage",
+      "value": 230.5,
+      "quality": 192,
+      "attributes": {
+        "unit": "V"
+      }
+    },
+    {
+      "parameter_key": "current",
+      "value": 10.2,
+      "quality": 192,
+      "attributes": {
+        "unit": "A"
+      }
+    },
+    {
+      "parameter_key": "power",
+      "value": 2352.0,
+      "quality": 192,
+      "attributes": {
+        "unit": "W"
+      }
+    }
+  ],
+  "config_version": "v1.0",
+  "event_id": "optional-unique-id-here",
+  "metadata": {}
+}
+

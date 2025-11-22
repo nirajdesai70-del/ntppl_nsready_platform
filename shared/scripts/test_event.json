@@ -1,0 +1,18 @@
+{
+  "project_id": "4360b675-5135-435d-b281-93a551a3986d",
+  "site_id": "11cede34-1e6a-47f2-b7b2-8fc4634a760a",
+  "device_id": "33333333-3333-3333-3333-333333333333",
+  "protocol": "HTTP",
+  "source_timestamp": "2025-11-21T15:30:00Z",
+  "metrics": [
+    {
+      "parameter_key": "project:4360b675-5135-435d-b281-93a551a3986d:voltage",
+      "value": 231.7,
+      "quality": 192,
+      "attributes": {}
+    }
+  ],
+  "config_version": "v1.0",
+  "event_id": "manual-test-001",
+  "metadata": {}
+}
