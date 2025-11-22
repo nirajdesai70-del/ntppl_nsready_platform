@@ -1,6 +1,9 @@
 <<<<<<< HEAD
 # NSReady / NSWare Platform
 
+[![Build, Test, and Deploy](https://github.com/nirajdesai70-del/ntppl_nsready_platform/actions/workflows/build-test-deploy.yml/badge.svg)](https://github.com/nirajdesai70-del/ntppl_nsready_platform/actions/workflows/build-test-deploy.yml)
+[![Backend Baseline Tests](https://github.com/nirajdesai70-del/ntppl_nsready_platform/actions/workflows/backend_tests.yml/badge.svg)](https://github.com/nirajdesai70-del/ntppl_nsready_platform/actions/workflows/backend_tests.yml)
+
 This repository contains the **NSReady** (active) and **NSWare** (future) platform components for data collection, configuration management, and operational dashboards.
 
 ## Overview
