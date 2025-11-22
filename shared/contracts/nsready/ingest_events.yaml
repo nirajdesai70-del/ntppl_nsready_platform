@@ -1,0 +1,85 @@
+table: ingest_events
+purpose: Raw time-series telemetry per device/parameter for SCADA + NSWare.
+
+owners:
+  data_owner: data-eng@groupnish
+  steward: scada-team@groupnish
+
+consumers: [scada-team@groupnish, nsware-platform@groupnish]
+
+schema:
+  - name: time
+    type: timestamptz
+    timezone: UTC
+    semantics: Event time from device (source_timestamp)
+    constraints: [not_null]
+  
+  - name: device_id
+    type: uuid
+    semantics: Reference to devices.id
+    constraints: [not_null, foreign_key: devices.id]
+  
+  - name: parameter_key
+    type: text
+    semantics: Reference to parameter_templates.key (format: project:<uuid>:<name>)
+    constraints: [not_null, foreign_key: parameter_templates.key]
+  
+  - name: value
+    type: double precision
+    semantics: Measured value
+    constraints: []
+  
+  - name: quality
+    type: integer
+    semantics: Quality code (0–255); 192 = good
+    constraints: []
+  
+  - name: source
+    type: text
+    semantics: Protocol (GPRS/SMS/HTTP/…)
+    constraints: []
+  
+  - name: event_id
+    type: text
+    semantics: Optional idempotency key from source
+    constraints: []
+  
+  - name: attributes
+    type: jsonb
+    semantics: Additional metadata (e.g., unit, calibration info)
+    constraints: []
+  
+  - name: created_at
+    type: timestamptz
+    timezone: UTC
+    semantics: Ingest time at NSReady
+    constraints: [not_null]
+
+primary_key: [time, device_id, parameter_key]
+
+privacy:
+  pii: false
+
+sla:
+  cadence: near-real-time
+  delivery_deadline: "within 60s of event"
+  late_window_minutes: 5
+
+quality_rules:
+  null_pct_max:
+    value: 0.05
+  duplicate_policy:
+    description: "no duplicates per (time, device_id, parameter_key)"
+
+tenant_model:
+  rule: "tenant_id = customer_id"
+  rationale: "Ensures clean cross-customer isolation and future multi-tenant NSWare compatibility."
+  enforcement: "Tenant is derived automatically from project/site/device ownership."
+
+changes:
+  process: "PR to /contracts/nsready/ingest_events.yaml with approvals from data + SCADA owner"
+  breaking_change_notice_days: 30
+
+version: 1.0.0
+changelog: "/contracts/nsready/ingest_events_changelog.md"
+

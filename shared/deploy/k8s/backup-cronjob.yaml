@@ -1,0 +1,178 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backup-pvc
+  namespace: nsready-tier2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: hostpath  # Using hostpath for Docker Desktop
+  resources:
+    requests:
+      storage: 50Gi
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: nsready-tier2
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            fsGroup: 1000
+          containers:
+          - name: postgres-backup
+            image: postgres:15-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              apk add --no-cache postgresql-client aws-cli 2>/dev/null || true
+              cat > /tmp/backup_pg.sh << 'EOF'
+              #!/bin/sh
+              set -e
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="/backups/pg_backup_${TIMESTAMP}.sql.gz"
+              echo "Starting PostgreSQL backup at $(date)"
+              PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump -h "${POSTGRES_HOST}" -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" | gzip > "${BACKUP_FILE}"
+              if [ $? -eq 0 ]; then
+                echo "Backup completed: ${BACKUP_FILE}"
+                if [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ] && [ -n "${S3_BUCKET}" ]; then
+                  aws s3 cp "${BACKUP_FILE}" "s3://${S3_BUCKET}/postgres/${TIMESTAMP}.sql.gz" || echo "S3 upload failed"
+                fi
+                find /backups -name "pg_backup_*.sql.gz" -mtime +7 -delete
+                echo "Cleaned up backups older than 7 days"
+              else
+                echo "Backup failed!"
+                exit 1
+              fi
+              EOF
+              chmod +x /tmp/backup_pg.sh
+              /tmp/backup_pg.sh
+            env:
+            - name: POSTGRES_HOST
+              value: "nsready-db"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: nsready-secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nsready-secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: "nsready"
+            - name: S3_BUCKET
+              value: "nsready-backups"  # Update with your bucket
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: access-key-id
+                  optional: true
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: secret-access-key
+                  optional: true
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
+            volumeMounts:
+            - name: backup-scripts
+              mountPath: /scripts
+            - name: backup-storage
+              mountPath: /backups
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsNonRoot: true
+              runAsUser: 1000
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+          volumes:
+          - name: backup-scripts
+            configMap:
+              name: backup-scripts
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-pvc
+          restartPolicy: OnFailure
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-scripts
+  namespace: nsready-tier2
+data:
+  backup_pg.sh: |
+    #!/bin/bash
+    set -e
+    
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_FILE="/backups/pg_backup_${TIMESTAMP}.sql.gz"
+    
+    echo "Starting PostgreSQL backup at $(date)"
+    
+    # Perform backup
+    PGPASSWORD="${POSTGRES_PASSWORD}" pg_dump -h "${POSTGRES_HOST}" -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" \
+      | gzip > "${BACKUP_FILE}"
+    
+    if [ $? -eq 0 ]; then
+      echo "Backup completed successfully: ${BACKUP_FILE}"
+      
+      # Upload to S3 if credentials are provided
+      if [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ] && [ -n "${S3_BUCKET}" ]; then
+        echo "Uploading backup to S3..."
+        aws s3 cp "${BACKUP_FILE}" "s3://${S3_BUCKET}/postgres/${TIMESTAMP}.sql.gz" || echo "S3 upload failed, backup saved locally"
+      fi
+      
+      # Clean up old backups (keep last 7 days)
+      find /backups -name "pg_backup_*.sql.gz" -mtime +7 -delete
+      echo "Cleaned up backups older than 7 days"
+    else
+      echo "Backup failed!"
+      exit 1
+    fi
+    
+    echo "Backup process completed at $(date)"
+  
+  backup_jetstream.sh: |
+    #!/bin/bash
+    set -e
+    
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_FILE="/backups/jetstream_backup_${TIMESTAMP}.tar.gz"
+    
+    echo "Starting NATS JetStream backup at $(date)"
+    
+    # Note: This requires NATS CLI or API access
+    # For now, we'll create a placeholder that can be enhanced
+    echo "JetStream backup functionality requires NATS CLI or API access"
+    echo "Backup file placeholder: ${BACKUP_FILE}"
+    
+    # Upload to S3 if credentials are provided
+    if [ -n "${AWS_ACCESS_KEY_ID}" ] && [ -n "${AWS_SECRET_ACCESS_KEY}" ] && [ -n "${S3_BUCKET}" ]; then
+      echo "Uploading backup to S3..."
+      touch "${BACKUP_FILE}"
+      aws s3 cp "${BACKUP_FILE}" "s3://${S3_BUCKET}/jetstream/${TIMESTAMP}.tar.gz" || echo "S3 upload failed"
+    fi
+    
+    echo "JetStream backup process completed at $(date)"
+

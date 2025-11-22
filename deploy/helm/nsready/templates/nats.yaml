@@ -1,0 +1,111 @@
+{{- if .Values.nats.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nats-pvc
+  namespace: {{ .Values.namespace }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.nats.storage.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.nats.storage.size }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nsready-nats
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "nsready.labels" . | nindent 4 }}
+spec:
+  serviceName: nsready-nats
+  replicas: {{ .Values.nats.jetstream.replicas }}
+  selector:
+    matchLabels:
+      app: nsready-nats
+  template:
+    metadata:
+      labels:
+        app: nsready-nats
+        {{- include "nsready.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.security }}
+      securityContext:
+        runAsNonRoot: {{ .runAsNonRoot }}
+        runAsUser: {{ .runAsUser }}
+        fsGroup: {{ .fsGroup }}
+      {{- end }}
+      containers:
+      - name: nats
+        image: {{ .Values.nats.image.repository }}:{{ .Values.nats.image.tag }}
+        command:
+        - "nats-server"
+        - "-js"
+        - "-m"
+        - "8222"
+        - "--store_dir"
+        - "/data/jetstream"
+        {{- if gt .Values.nats.jetstream.replicas 1 }}
+        - "--cluster"
+        - "--cluster_name"
+        - "nsready-nats-cluster"
+        {{- end }}
+        ports:
+        - containerPort: 4222
+          name: client
+        - containerPort: 8222
+          name: monitor
+        env:
+        - name: NATS_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: nsready-secrets
+              key: NATS_TOKEN
+              optional: true
+        volumeMounts:
+        - name: nats-storage
+          mountPath: /data
+        resources:
+          {{- toYaml .Values.nats.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8222
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8222
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: nats-storage
+        persistentVolumeClaim:
+          claimName: nats-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nsready-nats
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "nsready.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: nsready-nats
+  ports:
+  - port: 4222
+    targetPort: 4222
+    name: client
+  - port: 8222
+    targetPort: 8222
+    name: monitor
+  clusterIP: None
+{{- end }}
+
+

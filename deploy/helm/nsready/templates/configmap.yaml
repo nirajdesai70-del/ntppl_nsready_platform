@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nsready-config
+  namespace: {{ .Values.namespace }}
+data:
+  POSTGRES_DB: "nsready"
+  POSTGRES_HOST: {{ if .Values.postgres.useManagedService }}{{ .Values.postgres.managedService.host }}{{ else }}"nsready-db"{{ end }}
+  POSTGRES_PORT: {{ if .Values.postgres.useManagedService }}{{ .Values.postgres.managedService.port | quote }}{{ else }}"5432"{{ end }}
+  NATS_HOST: "nsready-nats"
+  NATS_PORT: "4222"
+  QUEUE_SUBJECT: "ingress.events"
+  DLQ_SUBJECT: "ingress.events.dlq"
+  SERVICE_NAME: "collector_service"
+  SERVICE_PORT: "8001"
+  WORKER_POOL_SIZE: {{ .Values.collectorService.workerPoolSize | quote }}
+  WORKER_BATCH_SIZE: {{ .Values.collectorService.workerBatchSize | quote }}
+  WORKER_BATCH_TIMEOUT: {{ .Values.collectorService.workerBatchTimeout | quote }}
+  NATS_PULL_BATCH_SIZE: {{ .Values.collectorService.natsPullBatchSize | quote }}
+  APP_ENV: "production"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-tool-config
+  namespace: {{ .Values.namespace }}
+data:
+  POSTGRES_DB: "nsready"
+  POSTGRES_HOST: {{ if .Values.postgres.useManagedService }}{{ .Values.postgres.managedService.host }}{{ else }}"nsready-db"{{ end }}
+  POSTGRES_PORT: {{ if .Values.postgres.useManagedService }}{{ .Values.postgres.managedService.port | quote }}{{ else }}"5432"{{ end }}
+  SERVICE_NAME: "admin_tool"
+  SERVICE_PORT: "8000"
+  APP_ENV: "production"
+
+

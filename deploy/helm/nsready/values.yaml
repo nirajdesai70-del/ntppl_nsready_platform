@@ -1,0 +1,166 @@
+# Default values for nsready
+namespace: nsready-tier2
+
+# Image registry configuration
+imageRegistry: ghcr.io/your-org
+imagePullPolicy: Always
+
+# Admin Tool Configuration
+adminTool:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: nsready-admin-tool
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Collector Service Configuration
+collectorService:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: nsready-collector-service
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8001
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "1000m"
+  # Worker configuration
+  workerPoolSize: 4
+  workerBatchSize: 50
+  workerBatchTimeout: 0.5
+  natsPullBatchSize: 100
+  # Autoscaling
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+# PostgreSQL Configuration
+postgres:
+  enabled: true
+  image:
+    repository: timescale/timescaledb
+    tag: latest-pg15
+  storage:
+    size: 20Gi
+    storageClass: standard
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  # Use managed database service instead
+  useManagedService: false
+  managedService:
+    host: ""  # e.g., your-rds-endpoint.amazonaws.com
+    port: 5432
+
+# NATS Configuration
+nats:
+  enabled: true
+  image:
+    repository: nats
+    tag: 2.10-alpine
+  storage:
+    size: 10Gi
+    storageClass: standard
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  # JetStream cluster configuration
+  jetstream:
+    enabled: true
+    replicas: 1  # Set to 3 for production cluster
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+  hosts:
+    - host: admin.nsready.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: admin-tool
+          port: 8000
+    - host: collector.nsready.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: collector-service
+          port: 8001
+  tls:
+    - secretName: nsready-tls
+      hosts:
+        - admin.nsready.example.com
+        - collector.nsready.example.com
+
+# Security Configuration
+security:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  # RBAC
+  rbac:
+    enabled: true
+  # Service Account
+  serviceAccount:
+    create: true
+    name: nsready-service-account
+
+# Secrets (should be managed externally in production)
+secrets:
+  postgresUser: postgres
+  postgresPassword: CHANGE_ME_IN_PRODUCTION
+  jwtSecret: CHANGE_ME_IN_PRODUCTION
+  jwtIssuer: nsready-auth
+  natsToken: CHANGE_ME_IN_PRODUCTION
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    scrapeInterval: 30s
+  grafana:
+    enabled: true
+
+# Backups
+backups:
+  enabled: true
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retentionDays: 7
+  s3:
+    enabled: false
+    bucket: nsready-backups
+    region: us-east-1
+
+

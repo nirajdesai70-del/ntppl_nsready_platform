@@ -1,0 +1,417 @@
+openapi: 3.0.3
+info:
+  title: NTPPL NS-Ready Platform API
+  description: |
+    Complete API specification for the NTPPL NS-Ready Data Collection and Configuration Platform.
+    Includes Admin Tool and Collector Service endpoints.
+  version: 1.0.0
+  contact:
+    name: NTPPL NS-Ready Platform Support
+
+servers:
+  - url: http://localhost:8000
+    description: Admin Tool (Development)
+  - url: http://localhost:8001
+    description: Collector Service (Development)
+  - url: https://admin.nsready.example.com
+    description: Admin Tool (Production)
+  - url: https://collector.nsready.example.com
+    description: Collector Service (Production)
+
+paths:
+  # Admin Tool Endpoints
+  /health:
+    get:
+      tags:
+        - Admin Tool
+      summary: Admin Tool health check
+      description: Returns service health status
+      operationId: adminHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: "ok"
+
+  /admin/customers:
+    get:
+      tags:
+        - Registry
+      summary: List customers
+      description: Retrieve customers. Customer users must provide X-Customer-ID header to access only their own customer. Engineers can omit X-Customer-ID to access all customers.
+      operationId: listCustomers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of customers
+        '403':
+          description: Access denied - resource does not belong to authenticated tenant
+        '404':
+          description: Resource not found
+    post:
+      tags:
+        - Registry
+      summary: Create customer
+      description: Create a new customer (tenant). Engineers only. Customer users cannot create customers.
+      operationId: createCustomer
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Not required for creating customers (engineer-only operation). For other operations, customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '201':
+          description: Customer (tenant) created
+
+  /admin/projects:
+    get:
+      tags:
+        - Registry
+      summary: List projects
+      description: Retrieve projects. Customer users must provide X-Customer-ID header to access only their customer's projects. Engineers can omit X-Customer-ID to access all projects.
+      operationId: listProjects
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of projects
+        '403':
+          description: Access denied - resource does not belong to authenticated tenant
+        '404':
+          description: Resource not found
+    post:
+      tags:
+        - Registry
+      summary: Create project
+      description: Create a new project. Customer users must provide X-Customer-ID header matching the customer_id in request body. Engineers can omit X-Customer-ID to create projects for any customer.
+      operationId: createProject
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+
+  /admin/sites:
+    get:
+      tags:
+        - Registry
+      summary: List sites
+      description: Retrieve sites. Customer users must provide X-Customer-ID header. Engineers can omit X-Customer-ID to access all sites.
+      operationId: listSites
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+    post:
+      tags:
+        - Registry
+      summary: Create site
+      description: Create a new site. Customer users must provide X-Customer-ID header. Engineers can omit X-Customer-ID.
+      operationId: createSite
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+
+  /admin/devices:
+    get:
+      tags:
+        - Registry
+      summary: List devices
+      description: Retrieve devices. Customer users must provide X-Customer-ID header. Engineers can omit X-Customer-ID to access all devices.
+      operationId: listDevices
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+    post:
+      tags:
+        - Registry
+      summary: Create device
+      description: Create a new device. Customer users must provide X-Customer-ID header. Engineers can omit X-Customer-ID.
+      operationId: createDevice
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+
+  /admin/parameter_templates:
+    get:
+      tags:
+        - Registry
+      summary: List parameter templates
+      description: Retrieve parameter templates. Customer users must provide X-Customer-ID header. Engineers can omit X-Customer-ID to access all parameter templates.
+      operationId: listParameterTemplates
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+    post:
+      tags:
+        - Registry
+      summary: Create parameter template
+      description: Create a new parameter template. Customer users must provide X-Customer-ID header. Engineers can omit X-Customer-ID.
+      operationId: createParameterTemplate
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: X-Customer-ID
+          in: header
+          description: Customer ID for this request. In NSReady v1, X-Customer-ID is the tenant identifier. Customer users are restricted to their own customer_id. Engineer/admin users may omit it to operate across tenants, where allowed.
+          required: false
+          schema:
+            type: string
+            format: uuid
+
+  # Collector Service Endpoints
+  /v1/health:
+    get:
+      tags:
+        - Collector Service
+      summary: Collector Service health check
+      description: Returns service health, queue depth, and database connection status
+      operationId: collectorHealth
+      responses:
+        '200':
+          description: Service health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: "ok"
+                  queue_depth:
+                    type: integer
+                    description: Current NATS queue depth
+                    example: 0
+                  db:
+                    type: string
+                    description: Database connection status
+                    example: "connected"
+                  queue:
+                    type: object
+                    description: Detailed JetStream consumer status
+                    properties:
+                      consumer:
+                        type: string
+                        example: "ingest_workers"
+                      pending:
+                        type: integer
+                        description: Messages pending delivery to the consumer
+                        example: 0
+                      ack_pending:
+                        type: integer
+                        description: Messages delivered but not yet acknowledged
+                        example: 0
+                      redelivered:
+                        type: integer
+                        description: Total redelivered messages reported by JetStream
+                        example: 0
+                      waiting_pulls:
+                        type: integer
+                        description: Number of waiting pull requests
+                        example: 0
+
+  /v1/ingest:
+    post:
+      tags:
+        - Collector Service
+      summary: Ingest telemetry event
+      description: |
+        Accepts a NormalizedEvent v1.0 schema payload and queues it for async processing.
+        Returns a trace_id for tracking.
+      operationId: ingestEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - project_id
+                - site_id
+                - device_id
+                - metrics
+                - protocol
+                - source_timestamp
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                site_id:
+                  type: string
+                  format: uuid
+                device_id:
+                  type: string
+                  format: uuid
+                metrics:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - parameter_key
+                      - value
+                    properties:
+                      parameter_key:
+                        type: string
+                      value:
+                        type: number
+                      quality:
+                        type: integer
+                      attributes:
+                        type: object
+                protocol:
+                  type: string
+                  enum: [SMS, GPRS, HTTP]
+                source_timestamp:
+                  type: string
+                  format: date-time
+                config_version:
+                  type: string
+                event_id:
+                  type: string
+      responses:
+        '200':
+          description: Event queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "queued"
+                  trace_id:
+                    type: string
+                    format: uuid
+        '400':
+          description: Validation error
+        '500':
+          description: Internal server error
+
+  /metrics:
+    get:
+      tags:
+        - Collector Service
+        - Monitoring
+      summary: Prometheus metrics endpoint
+      description: |
+        Exposes Prometheus-compatible metrics for monitoring:
+        - ingest_events_total: Total events ingested (by status)
+        - ingest_errors_total: Total errors (by error_type)
+        - ingest_queue_depth: Current queue depth
+        - ingest_rate_per_second: Current ingestion rate
+        - db_latency_seconds: Database operation latency
+        - system_uptime_seconds: System uptime
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Prometheus metrics in text format
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: |
+                  # HELP ingest_events_total Total events ingested
+                  # TYPE ingest_events_total counter
+                  ingest_events_total{status="queued"} 100
+                  ingest_events_total{status="success"} 95
+                  # HELP ingest_queue_depth Current queue depth
+                  # TYPE ingest_queue_depth gauge
+                  ingest_queue_depth 5
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication (use "devtoken" for development)
+
+tags:
+  - name: Admin Tool
+    description: Admin Tool API endpoints
+  - name: Registry
+    description: Registry management endpoints (customers, projects, sites, devices, parameter templates)
+  - name: Collector Service
+    description: Collector Service API endpoints
+  - name: Monitoring
+    description: Monitoring and metrics endpoints
+
+

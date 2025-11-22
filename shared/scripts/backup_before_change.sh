@@ -80,7 +80,7 @@ done
 
 # Default files if none specified
 if [ ${#FILES_TO_BACKUP[@]} -eq 0 ]; then
-    FILES_TO_BACKUP=("README.md" "shared/master_docs/")
+    FILES_TO_BACKUP=("README.md" "master_docs/")
     info "No files specified, using defaults: ${FILES_TO_BACKUP[*]}"
 fi
 
@@ -93,7 +93,7 @@ fi
 # Check if we have uncommitted changes (warn but don't fail)
 if ! git diff-index --quiet HEAD --; then
     warning "You have uncommitted changes. They will be included in the backup branch."
-    git status --short | head -10
+    git status --short
     echo ""
     read -p "Continue? (y/N) " -n 1 -r
     echo
@@ -107,35 +107,18 @@ echo ""
 info "🔒 Creating backups for change: ${CHANGE_NAME}"
 echo ""
 
-# Ensure backups directory exists
-mkdir -p backups
-if [ ! -f "backups/.gitkeep" ]; then
-    touch backups/.gitkeep
-fi
-
 # Layer 1: File-level backup
 info "📁 Creating file-level backup..."
 mkdir -p "$BACKUP_DIR"
 
 BACKUPED_COUNT=0
 SKIPPED_COUNT=0
-BACKUPED_FILES=()
 
 for file in "${FILES_TO_BACKUP[@]}"; do
-    # Check if file exists (as file or directory)
-    if [ -e "$file" ] || [ -f "$file" ] || [ -d "$file" ]; then
+    if [ -e "$file" ]; then
         info "  Copying $file..."
-        # Try to copy, handle both files and directories
-        if cp -r "$file" "$BACKUP_DIR/" 2>/dev/null; then
-            BACKUPED_COUNT=$((BACKUPED_COUNT + 1))
-            BACKUPED_FILES+=("$file")
-        elif cp "$file" "$BACKUP_DIR/" 2>/dev/null; then
-            BACKUPED_COUNT=$((BACKUPED_COUNT + 1))
-            BACKUPED_FILES+=("$file")
-        else
-            warning "  Failed to copy $file"
-            SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
-        fi
+        cp -r "$file" "$BACKUP_DIR/" 2>/dev/null || cp "$file" "$BACKUP_DIR/" 2>/dev/null
+        BACKUPED_COUNT=$((BACKUPED_COUNT + 1))
     else
         warning "  $file does not exist, skipping"
         SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
@@ -144,7 +127,6 @@ done
 
 if [ $BACKUPED_COUNT -eq 0 ]; then
     error "No files were backed up. Please check file paths."
-    error "Attempted to backup: ${FILES_TO_BACKUP[*]}"
     exit 1
 fi
 
@@ -155,33 +137,15 @@ fi
 
 # Verify file backup
 info "Verifying file backup..."
-if [ ! -d "$BACKUP_DIR" ]; then
-    error "File backup directory was not created"
+if [ ! -d "$BACKUP_DIR" ] || [ -z "$(ls -A "$BACKUP_DIR")" ]; then
+    error "File backup directory is empty or doesn't exist"
     exit 1
 fi
-
-if [ -z "$(ls -A "$BACKUP_DIR")" ]; then
-    error "File backup directory is empty"
-    exit 1
-fi
-
-# Show what was backed up
-info "Backed up files:"
-for file in "${BACKUPED_FILES[@]}"; do
-    if [ -d "$BACKUP_DIR/$(basename "$file")" ] || [ -f "$BACKUP_DIR/$(basename "$file")" ]; then
-        size=$(du -sh "$BACKUP_DIR/$(basename "$file")" 2>/dev/null | cut -f1 || echo "unknown")
-        echo "  ✅ $(basename "$file") ($size)"
-    fi
-done
-
 success "File backup verified"
 
 # Layer 2: Git backup branch
 info ""
 info "🌿 Creating git backup branch..."
-
-# Get current branch to return to later
-CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
 
 # Check if branch already exists
 if git rev-parse --verify "$BACKUP_BRANCH" >/dev/null 2>&1; then
@@ -197,6 +161,9 @@ if git rev-parse --verify "$BACKUP_BRANCH" >/dev/null 2>&1; then
         git checkout -b "$BACKUP_BRANCH"
     fi
 else
+    # Get current branch to return to later
+    CURRENT_BRANCH=$(git branch --show-current)
+    
     # Create backup branch
     git checkout -b "$BACKUP_BRANCH"
     success "Backup branch created: $BACKUP_BRANCH"
@@ -206,7 +173,7 @@ fi
 git add .
 
 # Commit if there are changes
-if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+if ! git diff-index --quiet HEAD --; then
     git commit -m "Backup before ${CHANGE_NAME}" || {
         error "Failed to create commit"
         git checkout "$CURRENT_BRANCH" 2>/dev/null || true
@@ -289,10 +256,13 @@ if [ "$CREATE_TAG" = true ]; then
 fi
 echo ""
 echo "**Files backed up:**"
-for file in "${BACKUPED_FILES[@]}"; do
-    echo "- \`$file\`"
+for file in "${FILES_TO_BACKUP[@]}"; do
+    if [ -e "$file" ]; then
+        echo "- \`$file\`"
+    fi
 done
 echo "---"
 echo ""
 
 success "Backup process completed successfully! 🎉"
+

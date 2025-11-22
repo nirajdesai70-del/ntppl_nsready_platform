@@ -1,0 +1,93 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-restore
+  namespace: nsready-tier2
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: postgres-restore
+        image: postgres:15-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          apk add --no-cache postgresql-client 2>/dev/null || true
+          
+          # List available backups
+          echo "Available backup files:"
+          ls -lh /backups/pg_backup_*.sql.gz 2>/dev/null || echo "No backup files found"
+          
+          # Use the latest backup if BACKUP_FILE is not specified
+          if [ -z "${BACKUP_FILE}" ]; then
+            BACKUP_FILE=$(ls -t /backups/pg_backup_*.sql.gz 2>/dev/null | head -1)
+            echo "Using latest backup: ${BACKUP_FILE}"
+          fi
+          
+          if [ -z "${BACKUP_FILE}" ] || [ ! -f "${BACKUP_FILE}" ]; then
+            echo "ERROR: Backup file not found: ${BACKUP_FILE}"
+            echo "Available files:"
+            ls -lh /backups/ 2>/dev/null || echo "No files in /backups"
+            exit 1
+          fi
+          
+          echo "Restoring from: ${BACKUP_FILE}"
+          echo "Target database: ${POSTGRES_DB}"
+          echo "Target host: ${POSTGRES_HOST}"
+          
+          # Drop existing database objects (optional, set DROP_EXISTING=true to enable)
+          if [ "${DROP_EXISTING}" = "true" ]; then
+            echo "WARNING: Dropping existing database objects..."
+            PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${POSTGRES_HOST}" -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" || true
+          fi
+          
+          # Restore the backup
+          echo "Starting restore at $(date)"
+          gunzip -c "${BACKUP_FILE}" | PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${POSTGRES_HOST}" -U "${POSTGRES_USER}" -d "${POSTGRES_DB}"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Restore completed successfully at $(date)"
+          else
+            echo "❌ Restore failed!"
+            exit 1
+          fi
+        env:
+        - name: POSTGRES_HOST
+          value: "nsready-db"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: nsready-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nsready-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          value: "nsready"
+        - name: BACKUP_FILE
+          value: "/backups/pg_backup_20251110_200428.sql.gz"  # Specific backup file
+        - name: DROP_EXISTING
+          value: "false"  # Set to "true" to drop existing objects before restore
+        volumeMounts:
+        - name: backup-storage
+          mountPath: /backups
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: backup-storage
+        persistentVolumeClaim:
+          claimName: backup-pvc
+      restartPolicy: Never
+

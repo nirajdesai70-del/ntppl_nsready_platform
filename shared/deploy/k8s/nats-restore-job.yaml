@@ -1,0 +1,61 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nats-restore
+  namespace: nsready-tier2
+spec:
+  template:
+    spec:
+      containers:
+      - name: nats-restore
+        image: natsio/nats-box:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Available JetStream backups:"
+          ls -lh /backups/jetstream_*.tar.gz 2>/dev/null || echo "No backup files found"
+          echo ""
+          
+          if [ -z "${BACKUP_FILE}" ]; then
+            BACKUP_FILE=$(ls -t /backups/jetstream_*.tar.gz 2>/dev/null | head -1)
+            echo "Using latest backup: ${BACKUP_FILE}"
+          fi
+          
+          if [ -z "${BACKUP_FILE}" ] || [ ! -f "${BACKUP_FILE}" ]; then
+            echo "ERROR: Backup file not found: ${BACKUP_FILE}"
+            echo "Available files:"
+            ls -lh /backups/ 2>/dev/null || echo "No files in /backups"
+            exit 1
+          fi
+          
+          echo "Restoring JetStream stream INGRESS from: ${BACKUP_FILE}"
+          echo "NATS URL: ${NATS_URL}"
+          echo ""
+          
+          nats stream restore INGRESS "${BACKUP_FILE}"
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ Restore completed successfully"
+            echo ""
+            echo "Verifying stream:"
+            nats stream info INGRESS
+          else
+            echo "❌ Restore failed!"
+            exit 1
+          fi
+        env:
+        - name: NATS_URL
+          value: "nats://nsready-nats:4222"
+        - name: BACKUP_FILE
+          value: ""  # Leave empty to use latest, or specify: /backups/jetstream_YYYYMMDD_HHMM.tar.gz
+        volumeMounts:
+        - name: backup-storage
+          mountPath: /backups
+      volumes:
+      - name: backup-storage
+        persistentVolumeClaim:
+          claimName: backup-pvc
+      restartPolicy: Never
+
+

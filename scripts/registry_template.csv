@@ -1,0 +1,5 @@
+customer_name,project_name,project_description,site_name,site_location,device_name,device_type,device_code,device_status
+Customer 01,Project 01_Customer_01,Main project for Customer 01,Site 01_Customer_01,{},DEV_Customer_01_1,sensor,DEV_Customer_01_1,active
+Customer 01,Project 01_Customer_01,Main project for Customer 01,Site 01_Customer_01,{},DEV_Customer_01_2,sensor,DEV_Customer_01_2,active
+Customer 02,Project 01_Customer_02,Main project for Customer 02,Site 01_Customer_02,{},DEV_Customer_02_1,sensor,DEV_Customer_02_1,active
+

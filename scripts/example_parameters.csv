@@ -1,0 +1,15 @@
+customer_name,project_name,parameter_name,unit,dtype,min_value,max_value,required,description
+Customer 02,Project 01_Customer_02,Voltage,V,float,0,240,true,AC voltage measurement
+Customer 02,Project 01_Customer_02,Current,A,float,0,50,true,Current consumption
+Customer 02,Project 01_Customer_02,Power,kW,float,0,100,false,Power consumption
+Customer 03,Project 01_Customer_03,Temperature,°C,float,-40,85,true,Ambient temperature
+Customer 03,Project 01_Customer_03,Humidity,%,float,0,100,false,Relative humidity
+Customer 04,Project 01_Customer_04,Status,,string,,,false,Device status
+Customer 04,Project 01_Customer_04,Count,,int,0,,true,Event count
+
+
+
+
+
+
+

@@ -1,0 +1,14 @@
+apiVersion: v2
+name: nsready
+description: NTPPL NS-Ready Data Collection and Configuration Platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - telemetry
+  - data-collection
+  - timescaledb
+  - nats
+dependencies: []
+
+

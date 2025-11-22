@@ -1,0 +1,43 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nsready-ingress
+  namespace: nsready-tier2
+  annotations:
+    # Cert-manager for TLS
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # Ingress class
+    kubernetes.io/ingress.class: "nginx"
+    # SSL redirect
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+spec:
+  tls:
+  - hosts:
+    - admin.nsready.example.com  # Update with your domain
+    - collector.nsready.example.com  # Update with your domain
+    secretName: nsready-tls
+  rules:
+  - host: admin.nsready.example.com  # Update with your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: admin-tool
+            port:
+              number: 8000
+  - host: collector.nsready.example.com  # Update with your domain
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: collector-service
+            port:
+              number: 8001
+
+

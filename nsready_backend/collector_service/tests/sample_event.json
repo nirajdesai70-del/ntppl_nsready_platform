@@ -1,19 +1,20 @@
 {
-  "project_id": "550e8400-e29b-41d4-a716-446655440000",
-  "site_id": "550e8400-e29b-41d4-a716-446655440001",
-  "device_id": "550e8400-e29b-41d4-a716-446655440002",
+  "project_id": "8212caa2-b928-4213-b64e-9f5b86f4cad1",
+  "site_id": "89a66770-bdcc-4c95-ac97-e1829cb7a960",
+  "device_id": "bc2c5e47-f17e-46f0-b5e7-76b214f4f6ad",
+  "protocol": "GPRS",
+  "source_timestamp": "2025-11-14T12:00:00Z",
   "metrics": [
     {
-      "parameter_key": "voltage",
+      "parameter_key": "project:8212caa2-b928-4213-b64e-9f5b86f4cad1:voltage",
       "value": 230.5,
       "quality": 192,
       "attributes": {
-        "unit": "V",
-        "source": "meter_1"
+        "unit": "V"
       }
     },
     {
-      "parameter_key": "current",
+      "parameter_key": "project:8212caa2-b928-4213-b64e-9f5b86f4cad1:current",
       "value": 10.2,
       "quality": 192,
       "attributes": {
@@ -21,21 +22,15 @@
       }
     },
     {
-      "parameter_key": "power",
-      "value": 2351.1,
+      "parameter_key": "project:8212caa2-b928-4213-b64e-9f5b86f4cad1:power",
+      "value": 2455.8,
       "quality": 192,
       "attributes": {
         "unit": "W"
       }
     }
   ],
-  "protocol": "GPRS",
-  "source_timestamp": "2024-01-15T10:30:00Z",
-  "config_version": "v1.2",
-  "event_id": "device-001-20240115-103000",
-  "metadata": {
-    "firmware_version": "1.0.3",
-    "signal_strength": -85
-  }
+  "config_version": "v1.0",
+  "event_id": "sample-event-20251114-120000",
+  "metadata": {}
 }
-

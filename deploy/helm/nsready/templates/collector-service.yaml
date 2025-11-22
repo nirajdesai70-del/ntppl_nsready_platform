@@ -1,0 +1,105 @@
+{{- if .Values.collectorService.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collector-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "nsready.labels" . | nindent 4 }}
+    app: collector-service
+spec:
+  replicas: {{ .Values.collectorService.replicaCount }}
+  selector:
+    matchLabels:
+      app: collector-service
+  template:
+    metadata:
+      labels:
+        app: collector-service
+        {{- include "nsready.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.security }}
+      securityContext:
+        runAsNonRoot: {{ .runAsNonRoot }}
+        runAsUser: {{ .runAsUser }}
+        fsGroup: {{ .fsGroup }}
+      {{- end }}
+      {{- if .Values.security.serviceAccount.create }}
+      serviceAccountName: {{ .Values.security.serviceAccount.name }}
+      {{- end }}
+      containers:
+      - name: collector-service
+        image: {{ include "nsready.image" (merge (dict "repository" .Values.collectorService.image.repository "tag" .Values.collectorService.image.tag) .) }}
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        ports:
+        - containerPort: 8001
+          name: http
+        envFrom:
+        - configMapRef:
+            name: nsready-config
+        - secretRef:
+            name: nsready-secrets
+        resources:
+          {{- toYaml .Values.collectorService.resources | nindent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /v1/health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v1/health
+            port: 8001
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "nsready.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.collectorService.service.type }}
+  selector:
+    app: collector-service
+  ports:
+  - port: {{ .Values.collectorService.service.port }}
+    targetPort: 8001
+    protocol: TCP
+    name: http
+{{- end }}
+
+{{- if and .Values.collectorService.enabled .Values.collectorService.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: collector-service-hpa
+  namespace: {{ .Values.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: collector-service
+  minReplicas: {{ .Values.collectorService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.collectorService.autoscaling.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.collectorService.autoscaling.targetCPUUtilizationPercentage }}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.collectorService.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
+
+

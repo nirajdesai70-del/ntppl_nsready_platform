@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nsready-config
+  namespace: nsready-tier2
+data:
+  # Database Configuration
+  POSTGRES_DB: "nsready"
+  POSTGRES_HOST: "nsready-db"
+  DB_HOST: "nsready-db"  # Alias for collector service
+  POSTGRES_PORT: "5432"
+  DB_PORT: "5432"  # Alias for collector service
+  
+  # NATS Configuration
+  NATS_HOST: "nsready-nats"
+  NATS_PORT: "4222"
+  QUEUE_SUBJECT: "ingress.events"
+  DLQ_SUBJECT: "ingress.events.dlq"
+  
+  # Service Configuration
+  SERVICE_NAME: "collector_service"
+  SERVICE_PORT: "8001"
+  
+  # Worker Configuration (minimal for debugging)
+  WORKER_POOL_SIZE: "1"
+  WORKER_BATCH_SIZE: "1"
+  WORKER_BATCH_TIMEOUT: "0.1"
+  NATS_PULL_BATCH_SIZE: "1"
+  
+  # App Environment
+  APP_ENV: "production"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-tool-config
+  namespace: nsready-tier2
+data:
+  POSTGRES_DB: "nsready"
+  POSTGRES_HOST: "nsready-db"
+  POSTGRES_PORT: "5432"
+  SERVICE_NAME: "admin_tool"
+  SERVICE_PORT: "8000"
+  APP_ENV: "production"
+

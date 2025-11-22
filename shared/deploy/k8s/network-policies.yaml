@@ -1,0 +1,150 @@
+# Network Policies for mTLS-like isolation
+# Note: For true mTLS, use service mesh (Istio/Linkerd) or application-level TLS
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: admin-tool-policy
+  namespace: nsready-tier2
+spec:
+  podSelector:
+    matchLabels:
+      app: admin-tool
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow ingress from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow from collector service (if needed)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: collector-service
+  egress:
+  # Allow egress to database
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nsready-db
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: collector-service-policy
+  namespace: nsready-tier2
+spec:
+  podSelector:
+    matchLabels:
+      app: collector-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow from ingress controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 8001
+  egress:
+  # Allow egress to database
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nsready-db
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow egress to NATS
+  - to:
+    - podSelector:
+        matchLabels:
+          app: nsready-nats
+    ports:
+    - protocol: TCP
+      port: 4222
+  # Allow DNS
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: database-policy
+  namespace: nsready-tier2
+spec:
+  podSelector:
+    matchLabels:
+      app: nsready-db
+  policyTypes:
+  - Ingress
+  ingress:
+  # Only allow from admin-tool and collector-service
+  - from:
+    - podSelector:
+        matchLabels:
+          app: admin-tool
+    ports:
+    - protocol: TCP
+      port: 5432
+  - from:
+    - podSelector:
+        matchLabels:
+          app: collector-service
+    ports:
+    - protocol: TCP
+      port: 5432
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nats-policy
+  namespace: nsready-tier2
+spec:
+  podSelector:
+    matchLabels:
+      app: nsready-nats
+  policyTypes:
+  - Ingress
+  ingress:
+  # Only allow from collector-service
+  - from:
+    - podSelector:
+        matchLabels:
+          app: collector-service
+    ports:
+    - protocol: TCP
+      port: 4222
+  - from:
+    - podSelector:
+        matchLabels:
+          app: collector-service
+    ports:
+    - protocol: TCP
+      port: 8222
+
+

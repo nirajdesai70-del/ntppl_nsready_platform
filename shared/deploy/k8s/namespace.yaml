@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nsready-tier2
+  labels:
+    name: nsready-tier2
+    environment: production
+
+

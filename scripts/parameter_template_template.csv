@@ -1,0 +1,4 @@
+customer_name,project_name,parameter_name,unit,dtype,min_value,max_value,required,description
+Customer 01,Project 01_Customer_01,Voltage,V,float,0,240,true,AC voltage measurement
+Customer 01,Project 01_Customer_01,Current,A,float,0,50,true,Current consumption
+Customer 01,Project 01_Customer_01,Power,kW,float,0,100,false,Power consumption

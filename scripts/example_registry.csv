@@ -1,0 +1,7 @@
+customer_name,project_name,project_description,site_name,site_location,device_name,device_type,device_code,device_status
+Acme Corp,Factory Monitoring System,Real-time monitoring of factory equipment,Main Factory,{"address":"123 Industrial St","city":"Mumbai"},Sensor-001,sensor,SENSOR-001,active
+Acme Corp,Factory Monitoring System,Real-time monitoring of factory equipment,Main Factory,{"address":"123 Industrial St","city":"Mumbai"},Sensor-002,sensor,SENSOR-002,active
+Acme Corp,Factory Monitoring System,Real-time monitoring of factory equipment,Warehouse,{"address":"456 Storage Ave","city":"Mumbai"},Sensor-003,sensor,SENSOR-003,active
+Beta Industries,Power Plant SCADA,SCADA system for power generation,Plant A,{"latitude":19.0760,"longitude":72.8777},Meter-001,meter,METER-001,active
+Beta Industries,Power Plant SCADA,SCADA system for power generation,Plant A,{"latitude":19.0760,"longitude":72.8777},Meter-002,meter,METER-002,active
+

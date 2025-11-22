@@ -1,0 +1,155 @@
+name: Build, Test, and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/nsready
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r tests/requirements.txt
+
+      - name: Run tests
+        run: |
+          make test
+        env:
+          DOCKER_COMPOSE_CMD: docker compose
+
+      - name: Run tenant isolation tests
+        run: |
+          # Start services for tenant isolation tests
+          docker compose up -d
+          sleep 10
+          # Run tenant isolation tests
+          ./scripts/test_tenant_isolation.sh || exit 1
+        continue-on-error: false
+
+      - name: Run benchmarks
+        run: |
+          make benchmark
+        continue-on-error: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for admin-tool
+        id: meta-admin
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-admin-tool
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Extract metadata for collector-service
+        id: meta-collector
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-collector-service
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push admin-tool image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./admin_tool
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-admin.outputs.tags }}
+          labels: ${{ steps.meta-admin.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push collector-service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./collector_service
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-collector.outputs.tags }}
+          labels: ${{ steps.meta-collector.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Configure kubectl
+        run: |
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+          kubectl config set-context --current --namespace=nsready-tier2
+
+      - name: Deploy to Kubernetes
+        run: |
+          # Update image tags in values.yaml
+          sed -i "s|tag: latest|tag: ${{ github.sha }}|g" deploy/helm/nsready/values.yaml
+          sed -i "s|imageRegistry:.*|imageRegistry: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}|g" deploy/helm/nsready/values.yaml
+          
+          # Deploy using Helm
+          helm upgrade --install nsready deploy/helm/nsready \
+            --namespace nsready-tier2 \
+            --create-namespace \
+            --set secrets.postgresPassword="${{ secrets.POSTGRES_PASSWORD }}" \
+            --set secrets.jwtSecret="${{ secrets.JWT_SECRET }}" \
+            --set secrets.natsToken="${{ secrets.NATS_TOKEN }}" \
+            --wait \
+            --timeout 10m
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n nsready-tier2
+          kubectl get services -n nsready-tier2
+          kubectl rollout status deployment/admin-tool -n nsready-tier2
+          kubectl rollout status deployment/collector-service -n nsready-tier2
+
+
