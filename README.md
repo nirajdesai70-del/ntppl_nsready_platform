@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # NSReady / NSWare Platform
 
 This repository contains the **NSReady** (active) and **NSWare** (future) platform components for data collection, configuration management, and operational dashboards.
