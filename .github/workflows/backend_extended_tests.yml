@@ -51,9 +51,44 @@ jobs:
           EOF
 
       - name: Start docker compose stack
+        timeout-minutes: 10
         run: |
-          docker compose up -d
+          set -e
+          echo "Starting Docker Compose stack..."
+          
+          # Pull NATS image first with retry logic
+          echo "Pulling NATS image..."
+          for i in {1..3}; do
+            if docker pull nats:2.10-alpine; then
+              echo "✅ NATS image pulled successfully"
+              break
+            else
+              echo "⚠️  NATS image pull attempt $i/3 failed, retrying..."
+              sleep 5
+            fi
+          done
+          
+          # Build and start services
+          echo "Building and starting services..."
+          docker compose up -d --build
+          
+          echo "Checking service status..."
           docker compose ps
+          
+          # Verify containers are running
+          if ! docker ps | grep -q nsready_db; then
+            echo "❌ nsready_db container not running"
+            docker compose logs db
+            exit 1
+          fi
+          
+          if ! docker ps | grep -q nsready_nats; then
+            echo "❌ nsready_nats container not running"
+            docker compose logs nats
+            exit 1
+          fi
+          
+          echo "✅ Docker Compose stack started successfully"
 
       - name: Wait for nsready_db to be ready
         timeout-minutes: 5
