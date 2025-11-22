@@ -4,4 +4,7 @@ up:
 down:
 	docker-compose down
 
+.PHONY: benchmark
+benchmark:
+	@echo "Skipping benchmarks (not configured yet)."
 
