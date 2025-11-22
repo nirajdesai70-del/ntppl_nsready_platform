@@ -261,3 +261,5 @@ docker-compose down
 - **Backup Policy:** See `shared/master_docs/PROJECT_BACKUP_AND_VERSIONING_POLICY.md`
 - **Testing Guide:** See `nsready_backend/tests/README.md` (if exists)
 - **Dashboard Clarification:** See `shared/master_docs/NSREADY_VS_NSWARE_DASHBOARD_CLARIFICATION.md`
+
+<!-- CI Test: Testing backend_tests.yml workflow - 2025-11-22 -->
