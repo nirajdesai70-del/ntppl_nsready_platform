@@ -75,26 +75,45 @@ jobs:
       - name: Wait for services to be healthy
         timeout-minutes: 5
         run: |
+          set -e
           echo "Waiting for services to be healthy..."
           sleep 10
           
+          COLLECTOR_HEALTHY=false
           for i in {1..30}; do
             if curl -sf http://localhost:8001/v1/health > /dev/null 2>&1; then
               echo "✅ collector_service is healthy"
+              COLLECTOR_HEALTHY=true
               break
             fi
             echo "⏳ Waiting for collector_service... (attempt $i/30)"
             sleep 2
           done
           
+          ADMIN_HEALTHY=false
           for i in {1..30}; do
             if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
               echo "✅ admin_tool is healthy"
+              ADMIN_HEALTHY=true
               break
             fi
             echo "⏳ Waiting for admin_tool... (attempt $i/30)"
             sleep 2
           done
+          
+          if [ "$COLLECTOR_HEALTHY" != "true" ]; then
+            echo "❌ collector_service did not become healthy in time"
+            docker compose logs collector_service || true
+            exit 1
+          fi
+          
+          if [ "$ADMIN_HEALTHY" != "true" ]; then
+            echo "❌ admin_tool did not become healthy in time"
+            docker compose logs admin_tool || true
+            exit 1
+          fi
+          
+          echo "✅ All services are healthy"
 
       - name: Seed registry database
         timeout-minutes: 5
