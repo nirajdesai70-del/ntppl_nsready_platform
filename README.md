@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # NSReady / NSWare Platform
 
 This repository contains the **NSReady** (active) and **NSWare** (future) platform components for data collection, configuration management, and operational dashboards.
@@ -263,3 +264,4 @@ docker-compose down
 - **Dashboard Clarification:** See `shared/master_docs/NSREADY_VS_NSWARE_DASHBOARD_CLARIFICATION.md`
 
 <!-- CI Test: Testing backend_tests.yml workflow - 2025-11-22 -->
+
