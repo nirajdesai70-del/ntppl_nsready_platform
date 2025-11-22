@@ -348,7 +348,7 @@ cat >> "$REPORT" <<EOF
 - Customers tested: $CUSTOMER_COUNT_ACTUAL
 - Successful ingests: $TOTAL_SUCCESS
 - Failed ingests: $TOTAL_FAILED
-- Success rate: $(awk "BEGIN{printf \"%.1f\", ($TOTAL_SUCCESS/($TOTAL_SUCCESS+$TOTAL_FAILED))*100}")%
+- Success rate: $(if [ $((TOTAL_SUCCESS + TOTAL_FAILED)) -gt 0 ]; then echo "scale=1; ($TOTAL_SUCCESS * 100) / ($TOTAL_SUCCESS + $TOTAL_FAILED)" | bc; else echo "0.0"; fi)%
 
 **Per-Customer Results**:
 EOF

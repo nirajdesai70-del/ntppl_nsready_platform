@@ -137,7 +137,7 @@ test_endpoint() {
   fi
   
   http_code=$(echo "$response" | tail -1)
-  response_body=$(echo "$response" | head -n -1)
+  response_body=$(echo "$response" | sed -e '$d')
   
   echo "**Test: $description**" >> "$REPORT"
   echo "- Role: $role" >> "$REPORT"

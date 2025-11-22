@@ -126,7 +126,7 @@ test_negative_case() {
     --data-binary "$payload" 2>&1)
   
   HTTP_CODE=$(echo "$RESP" | tail -1)
-  RESP_BODY=$(echo "$RESP" | head -n -1)
+  RESP_BODY=$(echo "$RESP" | sed -e '$d')
   
   echo "**Test: $test_name**" >> "$REPORT"
   echo "- Payload: \`$payload\`" >> "$REPORT"
@@ -485,7 +485,7 @@ if [ "$LARGE_PAYLOAD" != "{\"error\":\"python3 not available\"}" ]; then
     --max-time 10 2>&1)
   
   HTTP_CODE=$(echo "$RESP" | tail -1)
-  RESP_BODY=$(echo "$RESP" | head -n -1)
+  RESP_BODY=$(echo "$RESP" | sed -e '$d')
   
   echo "**Test: Oversized payload (1MB+)**" >> "$REPORT"
   echo "- Payload size: ~1MB" >> "$REPORT"
@@ -575,7 +575,7 @@ fi)
 - Tests passed: $PASSED
 - Tests failed: $FAILED
 - Total tests: $((PASSED + FAILED))
-- Success rate: $(awk "BEGIN{printf \"%.1f\", ($PASSED/($PASSED+$FAILED))*100}")%
+- Success rate: $(if [ $((PASSED + FAILED)) -gt 0 ]; then echo "scale=1; ($PASSED * 100) / ($PASSED + $FAILED)" | bc; else echo "0.0"; fi)%
 
 **Data Integrity**:
 - Rows before: $BEFORE_ROWS
