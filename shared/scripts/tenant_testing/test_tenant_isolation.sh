@@ -188,7 +188,7 @@ fi
 # Test 6: Export script requires --customer-id
 echo ""
 echo "Test 6: Export script requires --customer-id"
-if ./scripts/export_registry_data.sh 2>&1 | grep -q "REQUIRED for tenant isolation"; then
+if ./shared/scripts/export_registry_data.sh 2>&1 | grep -q "REQUIRED for tenant isolation"; then
     test_result "Export script requires --customer-id" "PASS" "Script correctly requires parameter"
 else
     test_result "Export script requires --customer-id" "FAIL" "Script does not require parameter"
@@ -197,7 +197,7 @@ fi
 # Test 7: Export script validates UUID format
 echo ""
 echo "Test 7: Export script validates UUID format"
-if ./scripts/export_registry_data.sh --customer-id "invalid-uuid" 2>&1 | grep -q "Invalid customer_id format"; then
+if ./shared/scripts/export_registry_data.sh --customer-id "invalid-uuid" 2>&1 | grep -q "Invalid customer_id format"; then
     test_result "Export script validates UUID" "PASS" "Script rejects invalid UUID"
 else
     test_result "Export script validates UUID" "FAIL" "Script does not validate UUID"
@@ -206,7 +206,7 @@ fi
 # Test 8: Export script validates customer exists
 echo ""
 echo "Test 8: Export script validates customer exists"
-if ./scripts/export_registry_data.sh --customer-id "$FAKE_ID" 2>&1 | grep -q "not found"; then
+if ./shared/scripts/export_registry_data.sh --customer-id "$FAKE_ID" 2>&1 | grep -q "not found"; then
     test_result "Export script validates customer exists" "PASS" "Script rejects non-existent customer"
 else
     test_result "Export script validates customer exists" "FAIL" "Script does not validate customer existence"
@@ -215,10 +215,10 @@ fi
 # Test 9: Export script filters by tenant
 echo ""
 echo "Test 9: Export script filters by tenant"
-if [ -f "scripts/export_registry_data.sh" ]; then
+if [ -f "shared/scripts/export_registry_data.sh" ]; then
     set +e  # Allow test to continue even if export has no data
     # Create test export
-    ./scripts/export_registry_data.sh --customer-id "$CUSTOMER_A_ID" --test > /tmp/export_test.log 2>&1
+    ./shared/scripts/export_registry_data.sh --customer-id "$CUSTOMER_A_ID" --test > /tmp/export_test.log 2>&1
     EXPORT_EXIT=$?
     set -e
     

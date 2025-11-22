@@ -23,7 +23,7 @@ COLLECT_URL="${COLLECT_URL:-http://localhost:8001}"
 HEALTH_URL="${HEALTH_URL:-$COLLECT_URL/v1/health}"
 INGEST_URL="${INGEST_URL:-$COLLECT_URL/v1/ingest}"
 
-REPORT_DIR="tests/reports"
+REPORT_DIR="nsready_backend/tests/reports"
 TS="$(date +%Y%m%d_%H%M%S)"
 REPORT="$REPORT_DIR/MULTI_CUSTOMER_FLOW_TEST_$TS.md"
 

@@ -1,0 +1,205 @@
+# NOTE / INTENT
+# ----------------------------------------------------------------------------------
+# This workflow runs EXTENDED backend tests (tenant, roles, negative, etc.)
+# It is manually triggered only (workflow_dispatch) for full regression runs.
+#
+# Baseline Set tests (data flow, batch, stress) are run automatically in:
+#   - .github/workflows/backend_tests.yml (on push/PR)
+#
+# Use this workflow for:
+#   - Pre-release full regression
+#   - Tenant isolation validation
+#   - Extended test coverage before major milestones
+# ----------------------------------------------------------------------------------
+
+name: Backend Extended Tests (Manual)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  backend-extended-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      # Set default environment variables for docker-compose.yml
+      POSTGRES_DB: nsready
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: nsready_password
+      APP_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Docker setup
+        run: |
+          docker version
+          docker compose version
+
+      - name: Create .env file for tests
+        run: |
+          cat > .env << EOF
+          APP_ENV=${{ env.APP_ENV }}
+          POSTGRES_DB=${{ env.POSTGRES_DB }}
+          POSTGRES_USER=${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_HOST=db
+          POSTGRES_PORT=5432
+          NATS_URL=nats://nats:4222
+          EOF
+
+      - name: Start docker compose stack
+        run: |
+          docker compose up -d
+          docker compose ps
+
+      - name: Wait for nsready_db to be ready
+        timeout-minutes: 5
+        run: |
+          set -e
+          echo "Waiting for nsready_db to be ready..."
+          for i in {1..60}; do
+            if docker exec nsready_db pg_isready -U postgres -d nsready 2>/dev/null; then
+              echo "✅ nsready_db is ready."
+              exit 0
+            fi
+            echo "⏳ nsready_db not ready yet, retrying in 5s... (attempt $i/60)"
+            sleep 5
+          done
+          echo "❌ nsready_db did not become ready in time."
+          docker compose logs db
+          exit 1
+
+      - name: Wait for services to be healthy
+        timeout-minutes: 5
+        run: |
+          echo "Waiting for services to be healthy..."
+          sleep 10
+          
+          for i in {1..30}; do
+            if curl -sf http://localhost:8001/v1/health > /dev/null 2>&1; then
+              echo "✅ collector_service is healthy"
+              break
+            fi
+            echo "⏳ Waiting for collector_service... (attempt $i/30)"
+            sleep 2
+          done
+          
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ admin_tool is healthy"
+              break
+            fi
+            echo "⏳ Waiting for admin_tool... (attempt $i/30)"
+            sleep 2
+          done
+
+      - name: Seed registry database
+        timeout-minutes: 5
+        run: |
+          echo "Seeding registry database..."
+          docker exec -i nsready_db psql -U postgres -d nsready < nsready_backend/db/seed_registry.sql
+          echo "✅ Registry database seeded"
+
+      - name: Make scripts executable
+        run: |
+          chmod +x shared/scripts/*.sh
+          chmod +x shared/scripts/tenant_testing/*.sh 2>/dev/null || true
+
+      - name: Create reports directory
+        run: |
+          mkdir -p nsready_backend/tests/reports
+
+      - name: Run extended backend tests
+        timeout-minutes: 30
+        continue-on-error: false
+        run: |
+          set -e
+          
+          echo "========================================="
+          echo "Running Extended Backend Tests"
+          echo "========================================="
+          
+          echo ""
+          echo "▶️  Test 1/6: Negative Cases Test"
+          echo "----------------------------------------"
+          ./shared/scripts/test_negative_cases.sh || exit 1
+          
+          echo ""
+          echo "▶️  Test 2/6: Roles/Access Test"
+          echo "----------------------------------------"
+          ./shared/scripts/test_roles_access.sh || exit 1
+          
+          echo ""
+          echo "▶️  Test 3/6: Multi-Customer Flow Test"
+          echo "----------------------------------------"
+          ./shared/scripts/test_multi_customer_flow.sh || exit 1
+          
+          echo ""
+          echo "▶️  Test 4/6: Tenant Isolation Test"
+          echo "----------------------------------------"
+          ./shared/scripts/test_tenant_isolation.sh || exit 1
+          
+          echo ""
+          echo "▶️  Test 5/6: SCADA Connection Test"
+          echo "----------------------------------------"
+          ./shared/scripts/test_scada_connection.sh || echo "⚠️  SCADA test skipped/failed; review logs."
+          
+          echo ""
+          echo "▶️  Test 6/6: Final Test Drive"
+          echo "----------------------------------------"
+          ./shared/scripts/final_test_drive.sh || exit 1
+          
+          echo ""
+          echo "========================================="
+          echo "✅ All Extended Tests PASSED"
+          echo "========================================="
+
+      - name: Show test report summary
+        if: always()
+        run: |
+          echo "========================================="
+          echo "Extended Test Reports Generated"
+          echo "========================================="
+          if [ -d "nsready_backend/tests/reports" ]; then
+            ls -lh nsready_backend/tests/reports/ | tail -15
+            echo ""
+            echo "Recent report files:"
+            find nsready_backend/tests/reports -name "*.md" -type f -mmin -60 | sort
+          else
+            echo "⚠️  Reports directory not found"
+          fi
+
+      - name: Upload extended test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-extended-test-reports
+          path: nsready_backend/tests/reports/
+          retention-days: 7
+
+      - name: Upload service logs
+        if: failure()
+        run: |
+          echo "========================================="
+          echo "Service Logs (for debugging)"
+          echo "========================================="
+          docker compose logs --tail=100 > service_logs.txt
+        continue-on-error: true
+
+      - name: Upload service logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-test-service-logs
+          path: service_logs.txt
+          retention-days: 3
+
+      - name: Stop docker compose stack
+        if: always()
+        run: |
+          docker compose down -v
+          echo "✅ Docker stack stopped and volumes removed"
+

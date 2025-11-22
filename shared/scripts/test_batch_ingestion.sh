@@ -24,7 +24,7 @@ HEALTH_URL="${HEALTH_URL:-$COLLECT_URL/v1/health}"
 INGEST_URL="${INGEST_URL:-$COLLECT_URL/v1/ingest}"
 METRICS_URL="${METRICS_URL:-$COLLECT_URL/metrics}"
 
-REPORT_DIR="tests/reports"
+REPORT_DIR="nsready_backend/tests/reports"
 TS="$(date +%Y%m%d_%H%M%S)"
 REPORT="$REPORT_DIR/BATCH_INGESTION_TEST_$TS.md"
 

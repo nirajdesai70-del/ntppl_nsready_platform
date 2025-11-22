@@ -40,7 +40,7 @@ ADMIN_BEARER_TOKEN="${ADMIN_BEARER_TOKEN:-devtoken}"
 
 
 
-REPORT_DIR="tests/reports"
+REPORT_DIR="nsready_backend/tests/reports"
 
 TS="$(date +%Y%m%d_%H%M%S)"
 

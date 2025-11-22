@@ -1,0 +1,230 @@
+# NOTE / INTENT
+# ----------------------------------------------------------------------------------
+# This workflow runs the backend Baseline Set tests:
+#   - test_data_flow.sh
+#   - test_batch_ingestion.sh
+#   - test_stress_load.sh
+#
+# It is the PRIMARY place where backend test commands are defined.
+# Any change to backend test behaviour should be updated here and in:
+#   - nsready_backend/tests/README_BACKEND_TESTS.md
+#
+# Deploy workflows (e.g. build-test-deploy.yml) assume this has passed,
+# and only run light smoke checks on the deployed environment.
+# ----------------------------------------------------------------------------------
+
+name: Backend Baseline Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  # Set default environment variables for docker-compose.yml
+  # These can be overridden via GitHub Secrets if needed
+  POSTGRES_DB: nsready
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: nsready_password
+  APP_ENV: test
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # Fail if tests take longer than 30 minutes
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Verify Docker and Docker Compose are available
+      - name: Verify Docker setup
+        run: |
+          docker version
+          docker compose version
+
+      # 3. Create .env file for docker-compose (if not using secrets)
+      - name: Create .env file for tests
+        run: |
+          cat > .env << EOF
+          APP_ENV=${{ env.APP_ENV }}
+          POSTGRES_DB=${{ env.POSTGRES_DB }}
+          POSTGRES_USER=${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_HOST=db
+          POSTGRES_PORT=5432
+          NATS_URL=nats://nats:4222
+          EOF
+
+      # 4. Start backend stack
+      - name: Start docker compose stack
+        run: |
+          docker compose up -d
+          docker compose ps
+
+      # 5. Wait for Postgres (nsready_db) to be ready
+      - name: Wait for nsready_db to be ready
+        timeout-minutes: 5
+        run: |
+          set -e
+          echo "Waiting for nsready_db to be ready..."
+          for i in {1..60}; do
+            if docker exec nsready_db pg_isready -U postgres -d nsready 2>/dev/null; then
+              echo "✅ nsready_db is ready."
+              exit 0
+            fi
+            echo "⏳ nsready_db not ready yet, retrying in 5s... (attempt $i/60)"
+            sleep 5
+          done
+          echo "❌ nsready_db did not become ready in time."
+          docker compose logs db
+          exit 1
+
+      # 6. Wait for other services to be ready
+      - name: Wait for services to be healthy
+        timeout-minutes: 5
+        run: |
+          echo "Waiting for services to be healthy..."
+          sleep 10  # Give services time to start
+          
+          # Check collector service health
+          for i in {1..30}; do
+            if curl -sf http://localhost:8001/v1/health > /dev/null 2>&1; then
+              echo "✅ collector_service is healthy"
+              break
+            fi
+            echo "⏳ Waiting for collector_service... (attempt $i/30)"
+            sleep 2
+          done
+          
+          # Check admin service health
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ admin_tool is healthy"
+              break
+            fi
+            echo "⏳ Waiting for admin_tool... (attempt $i/30)"
+            sleep 2
+          done
+
+      # 7. Seed the registry database (same command as SOP)
+      - name: Seed registry database
+        timeout-minutes: 5
+        run: |
+          echo "Seeding registry database..."
+          docker exec -i nsready_db psql -U postgres -d nsready < nsready_backend/db/seed_registry.sql
+          echo "✅ Registry database seeded"
+
+      # 8. Ensure test scripts are executable
+      - name: Make test scripts executable
+        run: |
+          chmod +x shared/scripts/*.sh
+          chmod +x shared/scripts/tenant_testing/*.sh 2>/dev/null || true
+
+      # 9. Create reports directory
+      - name: Create reports directory
+        run: |
+          mkdir -p nsready_backend/tests/reports
+
+      # 10. Run Baseline Set tests
+      - name: Run baseline backend tests
+        timeout-minutes: 15
+        continue-on-error: false
+        run: |
+          set -e
+          
+          echo "========================================="
+          echo "Running Baseline Set Tests"
+          echo "========================================="
+          
+          # Test 1: Data Flow
+          echo ""
+          echo "▶️  Test 1/3: Data Flow Test"
+          echo "----------------------------------------"
+          if ./shared/scripts/test_data_flow.sh; then
+            echo "✅ Data Flow Test PASSED"
+          else
+            echo "❌ Data Flow Test FAILED"
+            exit 1
+          fi
+          
+          # Test 2: Batch Ingestion
+          echo ""
+          echo "▶️  Test 2/3: Batch Ingestion Test"
+          echo "----------------------------------------"
+          if ./shared/scripts/test_batch_ingestion.sh --count 100; then
+            echo "✅ Batch Ingestion Test PASSED"
+          else
+            echo "❌ Batch Ingestion Test FAILED"
+            exit 1
+          fi
+          
+          # Test 3: Stress Load
+          echo ""
+          echo "▶️  Test 3/3: Stress Load Test"
+          echo "----------------------------------------"
+          if ./shared/scripts/test_stress_load.sh; then
+            echo "✅ Stress Load Test PASSED"
+          else
+            echo "❌ Stress Load Test FAILED"
+            exit 1
+          fi
+          
+          echo ""
+          echo "========================================="
+          echo "✅ All Baseline Tests PASSED"
+          echo "========================================="
+
+      # 11. Show test report summary
+      - name: Show test report summary
+        if: always()
+        run: |
+          echo "========================================="
+          echo "Test Reports Generated"
+          echo "========================================="
+          if [ -d "nsready_backend/tests/reports" ]; then
+            ls -lh nsready_backend/tests/reports/ | tail -10
+            echo ""
+            echo "Recent report files:"
+            find nsready_backend/tests/reports -name "*.md" -type f -mmin -30 | sort
+          else
+            echo "⚠️  Reports directory not found"
+          fi
+
+      # 12. Upload test reports as CI artifacts
+      - name: Upload backend test reports
+        if: always()  # upload even if tests fail, for debugging
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: nsready_backend/tests/reports/
+          retention-days: 7
+
+      # 13. Upload service logs for debugging (if tests failed)
+      - name: Upload service logs
+        if: failure()
+        run: |
+          echo "========================================="
+          echo "Service Logs (for debugging)"
+          echo "========================================="
+          docker compose logs --tail=100 > service_logs.txt
+        continue-on-error: true
+
+      - name: Upload service logs artifact
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-logs
+          path: service_logs.txt
+          retention-days: 3
+
+      # 14. Tear down docker stack (cleanup)
+      - name: Stop docker compose stack
+        if: always()
+        run: |
+          docker compose down -v
+          echo "✅ Docker stack stopped and volumes removed"
+

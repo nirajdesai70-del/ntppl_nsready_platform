@@ -18,7 +18,7 @@ else
 fi
 
 ADMIN_URL="${ADMIN_URL:-http://localhost:8000}"
-REPORT_DIR="tests/reports"
+REPORT_DIR="nsready_backend/tests/reports"
 TS="$(date +%Y%m%d_%H%M%S)"
 REPORT="$REPORT_DIR/ROLES_ACCESS_TEST_$TS.md"
 

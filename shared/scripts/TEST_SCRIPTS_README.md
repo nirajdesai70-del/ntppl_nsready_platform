@@ -2,6 +2,8 @@
 
 This directory contains comprehensive test scripts for validating the NSReady data flow pipeline.
 
+**Note:** All scripts are located in `shared/scripts/`. Run scripts from the repository root.
+
 ## Available Test Scripts
 
 ### 1. Basic Data Flow Test
@@ -10,7 +12,7 @@ This directory contains comprehensive test scripts for validating the NSReady da
 Tests the complete end-to-end data flow from dashboard input to SCADA export.
 
 ```bash
-./scripts/test_data_flow.sh
+./shared/scripts/test_data_flow.sh
 ```
 
 **What it tests:**
@@ -20,7 +22,7 @@ Tests the complete end-to-end data flow from dashboard input to SCADA export.
 - SCADA views
 - SCADA export
 
-**Output**: `tests/reports/DATA_FLOW_TEST_*.md`
+**Output**: `nsready_backend/tests/reports/DATA_FLOW_TEST_*.md`
 
 ---
 
@@ -31,13 +33,13 @@ Tests sending multiple events in sequential and parallel batches.
 
 ```bash
 # Sequential batch (50 events)
-./scripts/test_batch_ingestion.sh --sequential --count 50
+./shared/scripts/test_batch_ingestion.sh --sequential --count 50
 
 # Parallel batch (100 events)
-./scripts/test_batch_ingestion.sh --parallel --count 100
+./shared/scripts/test_batch_ingestion.sh --parallel --count 100
 
 # Both modes
-./scripts/test_batch_ingestion.sh --count 50
+./shared/scripts/test_batch_ingestion.sh --count 50
 ```
 
 **What it tests:**
@@ -46,7 +48,7 @@ Tests sending multiple events in sequential and parallel batches.
 - Queue handling under batch load
 - Database insertion performance
 
-**Output**: `tests/reports/BATCH_INGESTION_TEST_*.md`
+**Output**: `nsready_backend/tests/reports/BATCH_INGESTION_TEST_*.md`
 
 ---
 
@@ -57,10 +59,10 @@ Tests system under sustained high load.
 
 ```bash
 # Default: 1000 events over 60s at 50 RPS
-./scripts/test_stress_load.sh
+./shared/scripts/test_stress_load.sh
 
 # Custom: 5000 events over 120s at 100 RPS
-./scripts/test_stress_load.sh --events 5000 --duration 120 --rate 100
+./shared/scripts/test_stress_load.sh --events 5000 --duration 120 --rate 100
 ```
 
 **What it tests:**
@@ -70,7 +72,7 @@ Tests system under sustained high load.
 - Error rates
 - Throughput measurement
 
-**Output**: `tests/reports/STRESS_LOAD_TEST_*.md`
+**Output**: `nsready_backend/tests/reports/STRESS_LOAD_TEST_*.md`
 
 ---
 
@@ -81,10 +83,10 @@ Tests data flow with multiple customers to verify tenant isolation.
 
 ```bash
 # Test with 5 customers (default)
-./scripts/test_multi_customer_flow.sh
+./shared/scripts/test_multi_customer_flow.sh
 
 # Test with 10 customers
-./scripts/test_multi_customer_flow.sh --customers 10
+./shared/scripts/test_multi_customer_flow.sh --customers 10
 ```
 
 **What it tests:**
@@ -93,7 +95,7 @@ Tests data flow with multiple customers to verify tenant isolation.
 - Per-customer data separation
 - Database integrity
 
-**Output**: `tests/reports/MULTI_CUSTOMER_FLOW_TEST_*.md`
+**Output**: `nsready_backend/tests/reports/MULTI_CUSTOMER_FLOW_TEST_*.md`
 
 ---
 
@@ -103,7 +105,7 @@ Tests data flow with multiple customers to verify tenant isolation.
 Tests system behavior with invalid data and error conditions.
 
 ```bash
-./scripts/test_negative_cases.sh
+./shared/scripts/test_negative_cases.sh
 ```
 
 **What it tests:**
@@ -117,7 +119,7 @@ Tests system behavior with invalid data and error conditions.
 
 **Expected**: All invalid requests should be rejected with appropriate HTTP status codes (400, 422)
 
-**Output**: `tests/reports/NEGATIVE_TEST_*.md`
+**Output**: `nsready_backend/tests/reports/NEGATIVE_TEST_*.md`
 
 ---
 
@@ -137,7 +139,7 @@ Tests system behavior with invalid data and error conditions.
 2. **Registry Seeded**
    ```bash
    # Seed the database with test data
-   docker exec -i nsready_db psql -U postgres -d nsready < db/seed_registry.sql
+   docker exec -i nsready_db psql -U postgres -d nsready < nsready_backend/db/seed_registry.sql
    ```
 
 3. **Port Forwarding** (Kubernetes only)
@@ -147,25 +149,25 @@ Tests system behavior with invalid data and error conditions.
 
 **Basic test:**
 ```bash
-DB_CONTAINER=nsready_db ./scripts/test_data_flow.sh
+DB_CONTAINER=nsready_db ./shared/scripts/test_data_flow.sh
 ```
 
 **All tests:**
 ```bash
 # Basic flow
-./scripts/test_data_flow.sh
+./shared/scripts/test_data_flow.sh
 
 # Batch ingestion
-./scripts/test_batch_ingestion.sh --count 100
+./shared/scripts/test_batch_ingestion.sh --count 100
 
 # Stress test
-./scripts/test_stress_load.sh --events 1000 --rate 50
+./shared/scripts/test_stress_load.sh --events 1000 --rate 50
 
 # Multi-customer
-./scripts/test_multi_customer_flow.sh --customers 5
+./shared/scripts/test_multi_customer_flow.sh --customers 5
 
 # Negative cases
-./scripts/test_negative_cases.sh
+./shared/scripts/test_negative_cases.sh
 ```
 
 ---
@@ -179,17 +181,17 @@ All scripts automatically detect the environment:
 You can override defaults:
 ```bash
 # Docker Compose
-DB_CONTAINER=nsready_db ./scripts/test_data_flow.sh
+DB_CONTAINER=nsready_db ./shared/scripts/test_data_flow.sh
 
 # Kubernetes
-NS=nsready-tier2 DB_POD=nsready-db-0 ./scripts/test_data_flow.sh
+NS=nsready-tier2 DB_POD=nsready-db-0 ./shared/scripts/test_data_flow.sh
 ```
 
 ---
 
 ## Test Reports
 
-All test reports are saved in `tests/reports/` with timestamps:
+All test reports are saved in `nsready_backend/tests/reports/` with timestamps:
 
 - `DATA_FLOW_TEST_YYYYMMDD_HHMMSS.md`
 - `BATCH_INGESTION_TEST_YYYYMMDD_HHMMSS.md`
@@ -216,9 +218,9 @@ Add to your CI/CD pipeline:
   run: |
     docker compose up -d
     sleep 10
-    docker exec -i nsready_db psql -U postgres -d nsready < db/seed_registry.sql
-    ./scripts/test_data_flow.sh
-    ./scripts/test_negative_cases.sh
+    docker exec -i nsready_db psql -U postgres -d nsready < nsready_backend/db/seed_registry.sql
+    ./shared/scripts/test_data_flow.sh
+    ./shared/scripts/test_negative_cases.sh
 ```
 
 ---
@@ -228,7 +230,7 @@ Add to your CI/CD pipeline:
 ### Script fails with "No device/site/project found"
 **Solution**: Seed the registry first
 ```bash
-docker exec -i nsready_db psql -U postgres -d nsready < db/seed_registry.sql
+docker exec -i nsready_db psql -U postgres -d nsready < nsready_backend/db/seed_registry.sql
 ```
 
 ### Script fails with "Collector service not reachable"
@@ -239,7 +241,7 @@ docker exec -i nsready_db psql -U postgres -d nsready < db/seed_registry.sql
 ### Container name mismatch
 **Solution**: Specify the correct container name
 ```bash
-DB_CONTAINER=nsready_db ./scripts/test_data_flow.sh
+DB_CONTAINER=nsready_db ./shared/scripts/test_data_flow.sh
 ```
 
 ---
@@ -270,7 +272,7 @@ DB_CONTAINER=nsready_db ./scripts/test_data_flow.sh
 
 For issues or questions:
 1. Check the test report for detailed error messages
-2. Review the [Data Flow Testing Guide](../master_docs/DATA_FLOW_TESTING_GUIDE.md)
+2. Review the [Data Flow Testing Guide](../../master_docs/tenant_upgrade/DATA_FLOW_TESTING_GUIDE.md)
 3. Check service logs: `docker logs collector_service`
 
 ---

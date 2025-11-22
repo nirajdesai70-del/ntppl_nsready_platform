@@ -23,7 +23,7 @@ HEALTH_URL="${HEALTH_URL:-$COLLECT_URL/v1/health}"
 INGEST_URL="${INGEST_URL:-$COLLECT_URL/v1/ingest}"
 METRICS_URL="${METRICS_URL:-$COLLECT_URL/metrics}"
 
-REPORT_DIR="tests/reports"
+REPORT_DIR="nsready_backend/tests/reports"
 TS="$(date +%Y%m%d_%H%M%S)"
 REPORT="$REPORT_DIR/DATA_FLOW_TEST_$TS.md"
 
@@ -339,9 +339,9 @@ echo -e "\n---\n" >> "$REPORT"
 
 note "Step 5: Testing SCADA export (optional)"
 
-if [ -f "scripts/export_scada_data.sh" ]; then
+if [ -f "shared/scripts/export_scada_data.sh" ]; then
   EXPORT_FILE="scada_export_test_$TS.txt"
-  if ./scripts/export_scada_data.sh --latest --format txt --output "$EXPORT_FILE" 2>/dev/null; then
+  if ./shared/scripts/export_scada_data.sh --latest --format txt --output "$EXPORT_FILE" 2>/dev/null; then
     if [ -f "$EXPORT_FILE" ] && [ -s "$EXPORT_FILE" ]; then
       ok "Step 5: SCADA export successful"
       echo "✅ Step 5: SCADA export successful" >> "$REPORT"
