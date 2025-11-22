@@ -1,4 +1,4 @@
-# NSReady/NSWare Test & CI Design Summary
+# ND Ready Backend – Test & CI Design Summary
 
 **Date**: 2025-01-22  
 **Status**: Commissioned v1  
@@ -8,44 +8,84 @@
 
 ## Executive Summary
 
-This document captures the design decisions made during the test suite standardization and CI integration for the NSReady/NSWare platform. It categorizes changes into **bug fixes** (permanent), **policy decisions** (adjustable), and **ergonomics** (comfort improvements), providing a clear reference for future adjustments.
+This document captures the design decisions made during the test suite standardization and CI integration for the ND Ready / NSReady platform. It categorizes changes into **bug fixes** (permanent), **policy decisions** (adjustable), and **ergonomics** (comfort improvements), providing a clear reference for future adjustments.
 
 ---
 
-## 1. Test Suite Architecture
+## 1. Test Layers
 
-### 1.1 Baseline Tests (Strict Gates)
+### 1.1 Baseline Set (Strict Gates)
+
+**Purpose**: Prove core backend is healthy on every change.
 
 **Location**: `.github/workflows/backend_tests.yml`  
 **Trigger**: `push` to `main`, `pull_request` to `main`, `workflow_dispatch`  
-**Purpose**: Core functionality validation that must pass on every commit
-
-**Tests Included**:
-- `test_data_flow.sh` - Basic end-to-end data flow
-- `test_batch_ingestion.sh --count 100` - Batch handling
-- `test_stress_load.sh` - Stability under load
-
 **Policy**: **Hard gate** - Any failure blocks merge/deploy
 
-**Rationale**: These tests validate core backend functionality that must work correctly. Failures indicate regressions or critical bugs.
+**Scripts** (under `shared/scripts/`):
+
+1. **`test_data_flow.sh`**
+   - **Verifies**: DB connectivity, basic end-to-end path, registry usage
+   - **Report**: `DATA_FLOW_TEST_*.md`
+
+2. **`test_batch_ingestion.sh --count 100`**
+   - **Verifies**: Batch handling, ingestion pipeline, queue drain
+   - **Report**: `BATCH_INGESTION_TEST_*.md`
+
+3. **`test_stress_load.sh`**
+   - **Verifies**: Behaviour under load: throughput, queue depth, no hard failures
+   - **Report**: `STRESS_LOAD_TEST_*.md`
+
+**Report Location**: All reports live in `nsready_backend/tests/reports/`
+
+**Rationale**: These three tests are your **"everyday gate"** - they validate core backend functionality that must work correctly. Failures indicate regressions or critical bugs.
 
 ---
 
-### 1.2 Extended Tests (Informational/Diagnostic)
+### 1.2 Extended Suite (Diagnostic)
+
+**Purpose**: Deep coverage across edge cases, roles, tenants, SCADA, and a full "test drive".
 
 **Location**: `.github/workflows/backend_extended_tests.yml`  
 **Trigger**: `workflow_dispatch` (manual only)  
-**Purpose**: Comprehensive diagnostic suite for known gaps and edge cases
+**Policy**: **Informational** - Failures are documented but don't block workflow (with exceptions noted below)
 
-**Tests Included**:
-- `test_negative_cases.sh` - Invalid input handling (with known limitations)
-- `test_roles_access.sh` - RBAC validation (with tenant isolation warnings)
-- `test_multi_customer_flow.sh` - Multi-tenant scenarios
-- `test_tenant_isolation.sh` - **Non-blocking** (known backend gaps)
-- `test_scada_connection.sh` - SCADA integration
-- `final_test_drive.sh` - **Non-blocking** (requires K8s cluster)
+**Scripts** (under `shared/scripts/`):
 
-**Policy**: **Informational** - Failures are documented but don't block workflow
+1. **`test_negative_cases.sh`**
+   - **Verifies**: Request validation & error handling (422s, malformed JSON, bad types)
+   - **Known limitations treated as warnings, not failures**:
+     - Non-existent `device_id` returns 200 (async validation by design)
+     - Oversized payload behaviour (timeout/500 acceptable)
+   - **Report**: `NEGATIVE_TEST_*.md`
+
+2. **`test_roles_access.sh`**
+   - **Verifies**: RBAC for Engineer vs Customer on `/admin/...` endpoints
+   - **Known gap as warning**:
+     - Customer can access another customer's project (expected 403, currently 200)
+   - **Report**: `ROLES_ACCESS_TEST_*.md`
+
+3. **`test_multi_customer_flow.sh`**
+   - **Verifies**: Multi-customer data flow and basic tenant separation
+   - **Warnings**: For customers with no parameters
+   - **Report**: `MULTI_CUSTOMER_FLOW_TEST_*.md`
+
+4. **`test_tenant_isolation.sh`** ⚠️ **Non-blocking in CI**
+   - **Verifies**: Deep tenant isolation checks on admin & export endpoints
+   - **Today**: Surfaces real FAILs (multi-tenant design gaps)
+   - **In CI**: Treated as **informational** (non-blocking), but reports are generated
+   - **Report**: `TENANT_ISOLATION_TEST_*.md`
+
+5. **`test_scada_connection.sh`**
+   - **Verifies**: SCADA DB connectivity + views (`v_scada_latest`, `v_scada_history`) via Docker Compose
+   - **Report**: Includes sample data rows
+   - **Report**: `SCADA_CONNECTION_TEST_*.md`
+
+6. **`final_test_drive.sh`** ⚠️ **Non-blocking in CI**
+   - **Verifies**: K8s-only full "test drive" (pods, port-forwards, API hits)
+   - **In CI (no cluster)**: Failures logged as **informational**
+   - **Locally or in K8s-enabled runs**: Can be treated as a **real gate**
+   - **Report**: `FINAL_TEST_DRIVE_*.md`
 
 **Rationale**: Extended tests reveal real gaps (tenant isolation, K8s requirements) that are valuable for diagnostics but shouldn't block development when these gaps are known and accepted.
 
@@ -162,7 +202,109 @@ This document captures the design decisions made during the test suite standardi
 
 ---
 
-## 3. Current Test Policies Matrix
+## 2. CI Workflows
+
+### 2.1 `backend_tests.yml` – Backend Baseline Tests
+
+**Role**: Primary CI gate for backend.
+
+**Triggers**: `push` + `pull_request` to `main`
+
+**Steps** (Docker Compose):
+1. Start stack (`docker compose up -d`)
+2. Wait for services to be healthy
+3. Seed DB (`nsready_backend/db/seed_registry.sql`)
+4. Run **Baseline Set**:
+   - `test_data_flow.sh`
+   - `test_batch_ingestion.sh --count 100`
+   - `test_stress_load.sh`
+5. Upload reports (`nsready_backend/tests/reports/`)
+
+**Policy**: **If any of these fail → CI is RED → do not merge.**
+
+---
+
+### 2.2 `backend_extended_tests.yml` – Backend Extended Tests (Manual)
+
+**Role**: Manual "full checkup" / diagnostic.
+
+**Trigger**: `workflow_dispatch` (manual)
+
+**Steps**:
+1. Start Docker Compose stack
+2. Wait for services to be healthy
+3. Seed DB
+4. Run all 6 extended tests in order
+
+**Behaviour**:
+- **Negative & Roles**: Strict for true validation/RBAC regressions; known gaps = warnings
+- **Multi-customer & SCADA**: Strict
+- **Tenant Isolation**: Strict inside its own script, but **non-blocking** in workflow:
+  - Reports FAILs
+  - CI prints warning and continues
+- **Final Test Drive**: Non-blocking in Docker-only CI (namespace not reachable → ⚠️, but workflow continues)
+  - Can be made strict when K8s is wired and stable
+
+**Outcome**:
+- Always generates all reports
+- Shows known gaps without blocking CI
+
+---
+
+### 2.3 `build-test-deploy.yml` – Build, Test & Deploy
+
+**Role**: Build images, deploy with Helm, and do **smoke checks**.
+
+**Triggers**: `push` to `main`, `develop`, plus PRs
+
+**Jobs**:
+
+1. **`build-and-test`**:
+   - Build & push `nsready-admin-tool` and `nsready-collector-service` images (with `sha-` tags)
+   - Optional Python tests / benchmarks (non-blocking)
+
+2. **`deploy`** (only on `push` to `main`):
+   - Use kubeconfig secret to talk to cluster
+   - Helm deploy to `nsready-tier2`
+   - Smoke checks:
+     - Basic rollout statuses
+     - Health endpoints (`/health`)
+
+**Policy**: All **heavy logic testing** is delegated to `backend_tests.yml` + `backend_extended_tests.yml`.
+
+---
+
+## 3. How to Use This in Practice
+
+### 3.1 On Every Change / PR
+
+**Rely on `backend_tests.yml` (Baseline Set)** to decide if backend is safe.
+
+- These three tests must pass before merging
+- Any failure indicates a regression or critical bug
+- Reports are automatically uploaded as CI artifacts
+
+### 3.2 Before Major Backend Changes or Releases
+
+**Manually run `Backend Extended Tests (Manual)`** to see:
+- Negative, Roles, Multi-customer, Tenant, SCADA, Final Drive status
+- Known gaps around tenant isolation & K8s
+- Full diagnostic coverage across edge cases
+
+### 3.3 For K8s / Platform Validation
+
+- **Locally**: Run `final_test_drive.sh` with a real kube context + namespace
+- **In CI**: When ready, wire kubeconfig secret and (optionally) make Final Drive a strict gate
+
+### 3.4 Clear Ladder
+
+This gives you a **clear ladder**:
+- **Baseline** → must always be green
+- **Extended** → full insight, but can tolerate "known limitations" while you evolve the platform
+
+---
+
+## 4. Current Test Policies Matrix
 
 | Test Script | Baseline Workflow | Extended Workflow | Standalone Run | Notes |
 |------------|-------------------|-------------------|----------------|-------|
@@ -183,7 +325,7 @@ This document captures the design decisions made during the test suite standardi
 
 ---
 
-## 4. Known Limitations & Future Adjustments
+## 5. Known Limitations & Future Adjustments
 
 ### 4.1 Tenant Isolation Gaps
 
@@ -229,7 +371,7 @@ This document captures the design decisions made during the test suite standardi
 
 ---
 
-## 5. How to Adjust Policies Later
+## 6. How to Adjust Policies Later
 
 ### 5.1 Tightening a Test (Make it a Hard Gate)
 
@@ -275,7 +417,7 @@ This document captures the design decisions made during the test suite standardi
 
 ---
 
-## 6. What NOT to Change
+## 7. What NOT to Change
 
 ### 6.1 Portability Fixes (Category A)
 
@@ -299,7 +441,7 @@ This document captures the design decisions made during the test suite standardi
 
 ---
 
-## 7. Safety & Rollback Strategy
+## 8. Safety & Rollback Strategy
 
 ### 7.1 Current Baseline Tag
 
@@ -331,7 +473,7 @@ git diff tests_commissioned_v1 -- .github/workflows/backend_extended_tests.yml
 
 ---
 
-## 8. Key Takeaways
+## 9. Key Takeaways
 
 ### 8.1 What We Fixed (Permanent)
 
@@ -354,7 +496,7 @@ git diff tests_commissioned_v1 -- .github/workflows/backend_extended_tests.yml
 
 ---
 
-## 9. Future Roadmap
+## 10. Future Roadmap
 
 ### Phase 1: Current State (✅ Complete)
 - Baseline tests: Strict gates
@@ -375,7 +517,7 @@ git diff tests_commissioned_v1 -- .github/workflows/backend_extended_tests.yml
 
 ---
 
-## 10. Questions & Answers
+## 11. Questions & Answers
 
 ### Q: Did we make too many changes for one error?
 
@@ -399,7 +541,7 @@ git diff tests_commissioned_v1 -- .github/workflows/backend_extended_tests.yml
 
 ---
 
-## 11. Contact & Maintenance
+## 12. Contact & Maintenance
 
 **Document Owner**: Engineering Team  
 **Last Updated**: 2025-01-22  
