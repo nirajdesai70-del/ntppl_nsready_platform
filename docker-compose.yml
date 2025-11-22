@@ -3,7 +3,7 @@ version: "3.9"
 services:
   admin_tool:
     build:
-      context: ./admin_tool
+      context: ./nsready_backend/admin_tool
       dockerfile: Dockerfile
     container_name: admin_tool
     env_file:
@@ -20,7 +20,7 @@ services:
 
   collector_service:
     build:
-      context: ./collector_service
+      context: ./nsready_backend/collector_service
       dockerfile: Dockerfile
     container_name: collector_service
     env_file:
@@ -37,7 +37,7 @@ services:
 
   db:
     build:
-      context: ./db
+      context: ./nsready_backend/db
       dockerfile: Dockerfile
     container_name: nsready_db
     env_file:
