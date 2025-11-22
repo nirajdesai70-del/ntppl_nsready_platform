@@ -7,6 +7,8 @@ This document defines the standard test procedure for the ND Ready / NSReady dat
 
 > **📋 Quick Operator View:** For a condensed operator reference with just commands and minimal checks, see [`README_BACKEND_TESTS_QUICK.md`](./README_BACKEND_TESTS_QUICK.md).
 
+> **📋 Test & CI Design Summary:** For architecture, policies, and design rationale (what's strict vs informational, known limitations, how to adjust policies), see [`gpt_review/TEST_CI_DESIGN_SUMMARY.md`](../../gpt_review/TEST_CI_DESIGN_SUMMARY.md).
+
 ---
 
 ## 1. Purpose
