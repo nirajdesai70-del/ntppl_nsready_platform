@@ -1,5 +1,14 @@
+-- Drop unique index that doesn't include partition column (required for hypertable)
+-- TimescaleDB requires unique indexes to include the partition column
+DROP INDEX IF EXISTS uq_ingest_event_id;
+
 -- Create hypertables and policies
 SELECT create_hypertable('ingest_events', by_range('time'), if_not_exists => TRUE);
+
+-- Recreate unique index with time column included (required for hypertables)
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ingest_event_id
+  ON ingest_events (time, event_id)
+  WHERE event_id IS NOT NULL;
 
 -- Optionally hypertable for measurements if desired
 -- SELECT create_hypertable('measurements', by_range('time'), if_not_exists => TRUE);
