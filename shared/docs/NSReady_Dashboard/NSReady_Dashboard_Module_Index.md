@@ -75,8 +75,8 @@ This index provides a complete map of all NSReady Dashboard and Platform documen
   _Location: `12_API_Developer_Manual.md`_  
   NSReady API endpoints, authentication, request/response formats, and developer integration guide.
 
-- **13 – Operational Checklist & Runbook**  
-  _Status: To be rebuilt_  
+- **13 – Operational Checklist & Runbook** ✅  
+  _Location: `13_Operational_Checklist_and_Runbook.md`_  
   Operational procedures, deployment checklists, monitoring, troubleshooting, and maintenance runbook.
 
 ---
@@ -113,8 +113,8 @@ Modules build upon each other in a logical sequence:
 **Recovered from iCloud Drive (2025-11-22):**
 - Modules 00-06 successfully recovered and committed to git
 
-**To be Rebuilt:**
-- Modules 07-13 will be reconstructed using existing process documentation, architecture notes, and execution summaries located in `shared/master_docs/`
+**Rebuilt (2025-11-22):**
+- Modules 07-13 successfully rebuilt using existing process documentation, architecture notes, and execution summaries located in `shared/master_docs/`
 
 ---
 
