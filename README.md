@@ -23,16 +23,24 @@ Both platforms share the same infrastructure foundation (PostgreSQL, NATS, Docke
 
 ```
 ntppl_nsready_platform/
-├── admin_tool/              # NSReady: Configuration management API (FastAPI, port 8000)
-├── collector_service/          # NSReady: Telemetry ingestion service (FastAPI, port 8001)
-├── db/                       # Database schema, migrations, and TimescaleDB setup
-├── frontend_dashboard/       # NSWare: React/TypeScript dashboard (future)
-├── deploy/                  # Deployment configs (K8s, Helm, Docker Compose)
-├── scripts/                 # Utility scripts (backup, import/export, testing)
+├── nsready_backend/
+│   ├── admin_tool/          # NSReady: Configuration management API (FastAPI, port 8000)
+│   ├── collector_service/   # NSReady: Telemetry ingestion service (FastAPI, port 8001)
+│   ├── db/                  # NSReady: Database schema, migrations, and TimescaleDB setup
+│   └── tests/               # NSReady: Backend tests (regression, performance, resilience)
+│
+├── nsware_frontend/
+│   └── frontend_dashboard/  # NSWare: React/TypeScript dashboard (future)
+│
+├── shared/
+│   ├── contracts/           # Shared data contracts
+│   ├── docs/                # User-facing documentation
+│   ├── master_docs/         # Master documentation and design specs
+│   ├── deploy/              # Deployment configs (K8s, Helm, Docker Compose)
+│   └── scripts/             # Utility scripts (backup, import/export, testing)
+│
 ├── backups/                 # Local file-level backups (excluded from git)
-├── tests/                   # Test suites (regression, performance, resilience)
-├── docs/                    # User-facing documentation (includes contracts/)
-├── master_docs/             # Master documentation and design specs
+├── .github/                 # GitHub workflows and PR templates
 ├── docker-compose.yml       # Local development environment
 ├── Makefile                 # Development commands
 └── README.md                # This file
@@ -42,38 +50,41 @@ ntppl_nsready_platform/
 
 The NSReady backend is split across three main services:
 
-- **`admin_tool/`** - Configuration management API
+- **`nsready_backend/admin_tool/`** - Configuration management API
   - Customer, project, site, device management
   - Parameter template management
   - Registry versioning and publishing
-  - **Note:** NSReady has a small internal operational dashboard (UI/templates) under `admin_tool/` for engineers and administrators. This is separate from NSWare's full SaaS dashboard.
+  - **Note:** NSReady has a small internal operational dashboard (UI/templates) under `nsready_backend/admin_tool/ui/` for engineers and administrators. This is separate from NSWare's full SaaS dashboard.
   
-- **`collector_service/`** - Telemetry ingestion service
+- **`nsready_backend/collector_service/`** - Telemetry ingestion service
   - REST API for event ingestion
   - NATS message queuing
   - Asynchronous database writes to TimescaleDB
   
-- **`db/`** - Database layer
+- **`nsready_backend/db/`** - Database layer
   - PostgreSQL 15 with TimescaleDB extension
   - Schema migrations
   - Views and stored procedures
 
 ### Documentation Layout
 
-- **`docs/`** - User-facing documentation (manuals, guides, tutorials)
-- **`master_docs/`** - Master documentation (design docs, architecture, policies)
+- **`shared/docs/`** - User-facing documentation (manuals, guides, tutorials)
+- **`shared/master_docs/`** - Master documentation (design docs, architecture, policies)
+- **`shared/contracts/`** - Shared data contracts
+- **`shared/deploy/`** - Deployment configurations (K8s, Helm, Docker Compose)
+- **`shared/scripts/`** - Utility scripts (backup, import/export, testing)
 
 **Note:** Future reorganization may consolidate documentation, but current structure is maintained for clarity.
 
 ### Backup Policy
 
-This project follows a **three-layer backup model** per `master_docs/PROJECT_BACKUP_AND_VERSIONING_POLICY.md`:
+This project follows a **three-layer backup model** per `shared/master_docs/PROJECT_BACKUP_AND_VERSIONING_POLICY.md`:
 
 1. **File-level backup** in `backups/` folder
 2. **Git backup branch** (`backup/YYYY-MM-DD-CHANGE_NAME`)
 3. **Git tag** (optional, recommended for major changes)
 
-Use `scripts/backup_before_change.sh` to automate backup creation before significant changes.
+Use `shared/scripts/backup_before_change.sh` to automate backup creation before significant changes.
 
 ---
 
@@ -118,14 +129,14 @@ NSWare will provide enhanced operational dashboards and analytics capabilities.
 **Critical Distinction:**
 
 - **NSReady Operational Dashboard** (Current, Internal)
-  - Location: `admin_tool/ui/` (or `admin_tool/templates/`) - under NSReady backend
+  - Location: `nsready_backend/admin_tool/ui/` (or `nsready_backend/admin_tool/templates/`)
   - Purpose: Lightweight internal UI for engineers/administrators
   - Technology: Simple HTML/JavaScript, served by FastAPI
   - Authentication: Bearer token (simple)
   - Status: Current / In design
 
 - **NSWare Dashboard** (Future, Full SaaS Platform)
-  - Location: `frontend_dashboard/` (future: `nsware_frontend/frontend_dashboard/`)
+  - Location: `nsware_frontend/frontend_dashboard/`
   - Purpose: Full industrial platform UI for multi-tenant SaaS operations
   - Technology: React/TypeScript, separate service
   - Authentication: Full stack (JWT, RBAC, MFA)
@@ -133,7 +144,9 @@ NSWare will provide enhanced operational dashboards and analytics capabilities.
 
 **See `master_docs/NSREADY_VS_NSWARE_DASHBOARD_CLARIFICATION.md` for full details.**
 
-**Note:** NSWare components are in development. See `master_docs/NSWARE_DASHBOARD_MASTER.md` for current status.
+**Note:** NSWare components are in development. See `shared/master_docs/NSWARE_DASHBOARD_MASTER/` for current status.
+
+**See `shared/master_docs/NSREADY_VS_NSWARE_DASHBOARD_CLARIFICATION.md` for full details on the distinction between NSReady UI and NSWare Dashboard.**
 
 ---
 
@@ -216,17 +229,17 @@ docker-compose down
 
 ### For Developers
 
-1. **Before making changes:** Create backups using `scripts/backup_before_change.sh`
+1. **Before making changes:** Create backups using `shared/scripts/backup_before_change.sh`
 2. **Work in feature branches:** Use `feature/`, `chore/`, or `fix/` prefixes
-3. **Follow backup policy:** See `master_docs/PROJECT_BACKUP_AND_VERSIONING_POLICY.md`
-4. **Test changes:** Run test suites in `tests/`
-5. **Update documentation:** Keep `docs/` and `master_docs/` in sync
+3. **Follow backup policy:** See `shared/master_docs/PROJECT_BACKUP_AND_VERSIONING_POLICY.md`
+4. **Test changes:** Run test suites in `nsready_backend/tests/`
+5. **Update documentation:** Keep `shared/docs/` and `shared/master_docs/` in sync
 
 ### For AI Tools (Cursor, GitHub Copilot, etc.)
 
 - **Repository structure:** Use the "Repository Structure" section above for accurate folder references
-- **Documentation:** Check `docs/` for user guides, `master_docs/` for design docs
-- **Backend services:** Understand the split between `admin_tool/`, `collector_service/`, and `db/`
+- **Documentation:** Check `shared/docs/` for user guides, `shared/master_docs/` for design docs
+- **Backend services:** Understand the split between `nsready_backend/admin_tool/`, `nsready_backend/collector_service/`, and `nsready_backend/db/`
 - **NSReady vs NSWare:** Distinguish between active (NSReady) and future (NSWare) components
 
 ---
@@ -242,7 +255,8 @@ docker-compose down
 
 ## Additional Resources
 
-- **API Documentation:** See `docs/12_API_Developer_Manual.md`
-- **Deployment Guide:** See `DEPLOYMENT_GUIDE.md`
-- **Backup Policy:** See `master_docs/PROJECT_BACKUP_AND_VERSIONING_POLICY.md`
-- **Testing Guide:** See `tests/README.md`
+- **API Documentation:** See `shared/docs/12_API_Developer_Manual.md` (if exists)
+- **Deployment Guide:** See `shared/deploy/` for deployment configurations
+- **Backup Policy:** See `shared/master_docs/PROJECT_BACKUP_AND_VERSIONING_POLICY.md`
+- **Testing Guide:** See `nsready_backend/tests/README.md` (if exists)
+- **Dashboard Clarification:** See `shared/master_docs/NSREADY_VS_NSWARE_DASHBOARD_CLARIFICATION.md`
