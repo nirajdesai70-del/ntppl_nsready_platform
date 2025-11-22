@@ -80,7 +80,7 @@ done
 
 # Default files if none specified
 if [ ${#FILES_TO_BACKUP[@]} -eq 0 ]; then
-    FILES_TO_BACKUP=("README.md" "master_docs/")
+    FILES_TO_BACKUP=("README.md" "shared/master_docs/")
     info "No files specified, using defaults: ${FILES_TO_BACKUP[*]}"
 fi
 
