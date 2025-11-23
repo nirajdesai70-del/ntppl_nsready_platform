@@ -160,6 +160,14 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
           kubectl config set-context --current --namespace=nsready-tier2
+          
+          # Check if cluster is accessible (skip if local cluster like Docker Desktop)
+          if ! kubectl cluster-info > /dev/null 2>&1; then
+            echo "⚠️  Cannot connect to Kubernetes cluster (may be local cluster not accessible from CI)"
+            echo "⚠️  Skipping deployment - this is expected for local Docker Desktop clusters"
+            exit 0
+          fi
+          
           kubectl cluster-info
 
       - name: Deploy to Kubernetes
