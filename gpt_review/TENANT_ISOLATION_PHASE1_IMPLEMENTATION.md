@@ -192,18 +192,21 @@ async def verify_tenant_access(
 
 ### 2.1 Update Imports
 
-**Add to the top of the file (after existing imports):**
+**Update the imports at the top of the file:**
 
 ```python
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 from typing import Optional
 import uuid
-```
 
-**Update the import from deps to include the new functions:**
-
-```python
+from core.db import get_session
 from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access
+from api.models import CustomerIn, CustomerOut
 ```
+
+**Note:** Make sure `status` is imported from `fastapi` (needed for `status.HTTP_404_NOT_FOUND`).
 
 ### 2.2 Replace `list_customers` Function
 
