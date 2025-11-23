@@ -72,18 +72,49 @@ async def create_site(payload: SiteIn, session: AsyncSession = Depends(get_sessi
 
 
 @router.get("/{site_id}", response_model=SiteOut)
-async def get_site(site_id: str, session: AsyncSession = Depends(get_session)):
+async def get_site(
+    site_id: str,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Get site by ID.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can access any existing site.
+    - Customer (with X-Customer-ID):
+        - If this site belongs to their customer (via project): 200
+        - If other tenant: 404
+    - If site_id does not exist: 404
+    """
+    # Fetch the site with its project's customer_id
     result = await session.execute(
-        text(
-            "SELECT id::text, project_id::text AS project_id, name, location, created_at "
-            "FROM sites WHERE id = :id"
-        ),
+        text("""
+            SELECT s.id::text, s.project_id::text AS project_id, s.name, s.location, s.created_at,
+                   p.customer_id::text AS customer_id
+            FROM sites s
+            JOIN projects p ON p.id = s.project_id
+            WHERE s.id = :id
+        """),
         {"id": site_id},
     )
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="Site not found")
-    return SiteOut(**row)
+
+    # If tenant_id is present, verify this site belongs to the tenant
+    if tenant_id is not None:
+        from api.deps import verify_tenant_access
+        await verify_tenant_access(tenant_id, row["customer_id"], session)
+
+    # Return site data (without customer_id in response)
+    return SiteOut(
+        id=row["id"],
+        project_id=row["project_id"],
+        name=row["name"],
+        location=row["location"],
+        created_at=row["created_at"],
+    )
 
 
 @router.put("/{site_id}", response_model=SiteOut)

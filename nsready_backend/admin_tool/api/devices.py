@@ -78,18 +78,52 @@ async def create_device(payload: DeviceIn, session: AsyncSession = Depends(get_s
 
 
 @router.get("/{device_id}", response_model=DeviceOut)
-async def get_device(device_id: str, session: AsyncSession = Depends(get_session)):
+async def get_device(
+    device_id: str,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Get device by ID.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can access any existing device.
+    - Customer (with X-Customer-ID):
+        - If this device belongs to their customer (via site → project): 200
+        - If other tenant: 404
+    - If device_id does not exist: 404
+    """
+    # Fetch the device with its project's customer_id (via site)
     result = await session.execute(
-        text(
-            "SELECT id::text, site_id::text AS site_id, name, device_type, external_id, status, created_at "
-            "FROM devices WHERE id = :id"
-        ),
+        text("""
+            SELECT d.id::text, d.site_id::text AS site_id, d.name, d.device_type, d.external_id, d.status, d.created_at,
+                   p.customer_id::text AS customer_id
+            FROM devices d
+            JOIN sites s ON s.id = d.site_id
+            JOIN projects p ON p.id = s.project_id
+            WHERE d.id = :id
+        """),
         {"id": device_id},
     )
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="Device not found")
-    return DeviceOut(**row)
+
+    # If tenant_id is present, verify this device belongs to the tenant
+    if tenant_id is not None:
+        from api.deps import verify_tenant_access
+        await verify_tenant_access(tenant_id, row["customer_id"], session)
+
+    # Return device data (without customer_id in response)
+    return DeviceOut(
+        id=row["id"],
+        site_id=row["site_id"],
+        name=row["name"],
+        device_type=row["device_type"],
+        external_id=row["external_id"],
+        status=row["status"],
+        created_at=row["created_at"],
+    )
 
 
 @router.put("/{device_id}", response_model=DeviceOut)
