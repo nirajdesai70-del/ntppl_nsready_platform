@@ -31,6 +31,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ${{ github.repository_owner }}/nsready
 
+# Workflow validation: ensure jobs are properly defined
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
