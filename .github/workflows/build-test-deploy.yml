@@ -134,7 +134,7 @@ jobs:
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.KUBECONFIG != '' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -151,8 +151,13 @@ jobs:
 
       - name: Configure kubectl
         run: |
+          if [ -z "${{ secrets.KUBECONFIG }}" ]; then
+            echo "⚠️  KUBECONFIG secret not set; skipping deployment"
+            exit 0
+          fi
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
           kubectl config set-context --current --namespace=nsready-tier2
+          kubectl cluster-info
 
       - name: Deploy to Kubernetes
         run: |
@@ -203,38 +208,57 @@ jobs:
       # Full backend tests are already run in backend_tests.yml.
       # --------------------------------------------------------------------------------
 
-      - name: Wait for admin_tool health
+      - name: Health check - admin_tool
         run: |
           set -e
+          echo "Setting up port-forward for admin_tool..."
+          kubectl port-forward deployment/admin-tool -n nsready-tier2 8000:8000 > /tmp/admin-portforward.log 2>&1 &
+          PF_ADMIN_PID=$!
+          sleep 5
+          
           echo "Waiting for admin_tool health endpoint..."
           for i in {1..30}; do
             if curl -fsS http://localhost:8000/health > /dev/null 2>&1; then
               echo "✅ admin_tool is healthy."
+              kill $PF_ADMIN_PID 2>/dev/null || true
               exit 0
             fi
             echo "⏳ admin_tool not healthy yet, retrying in 5s... (attempt $i/30)"
             sleep 5
           done
+          
           echo "❌ admin_tool did not become healthy in time."
-          echo "--- admin_tool logs (if available) ---"
-          docker logs admin_tool 2>/dev/null || kubectl logs -n nsready-tier2 deployment/admin-tool --tail=50 || echo "admin_tool logs not available."
+          echo "--- admin_tool logs ---"
+          kubectl logs -n nsready-tier2 deployment/admin-tool --tail=50 || echo "admin_tool logs not available."
+          kill $PF_ADMIN_PID 2>/dev/null || true
           exit 1
+        continue-on-error: false
 
-      - name: Wait for collector_service health
+      - name: Health check - collector_service
         run: |
           set -e
+          echo "Setting up port-forward for collector_service..."
+          kubectl port-forward deployment/collector-service -n nsready-tier2 8001:8001 > /tmp/collector-portforward.log 2>&1 &
+          PF_COLLECTOR_PID=$!
+          sleep 5
+          
           echo "Waiting for collector_service health endpoint..."
           for i in {1..30}; do
             if curl -fsS http://localhost:8001/v1/health > /dev/null 2>&1; then
-              echo "✅ collector_service is healthy."
+              HEALTH_RESPONSE=$(curl -s http://localhost:8001/v1/health)
+              echo "✅ collector_service is healthy: $HEALTH_RESPONSE"
+              kill $PF_COLLECTOR_PID 2>/dev/null || true
               exit 0
             fi
             echo "⏳ collector_service not healthy yet, retrying in 5s... (attempt $i/30)"
             sleep 5
           done
+          
           echo "❌ collector_service did not become healthy in time."
-          echo "--- collector_service logs (if available) ---"
-          docker logs collector_service 2>/dev/null || kubectl logs -n nsready-tier2 deployment/collector-service --tail=50 || echo "collector_service logs not available."
+          echo "--- collector_service logs ---"
+          kubectl logs -n nsready-tier2 deployment/collector-service --tail=50 || echo "collector_service logs not available."
+          kill $PF_COLLECTOR_PID 2>/dev/null || true
           exit 1
+        continue-on-error: false
 
 
