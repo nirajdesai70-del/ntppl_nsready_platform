@@ -99,3 +99,86 @@ def validate_uuid(uuid_str: str, field_name: str = "ID") -> uuid.UUID:
         )
 
 
+async def verify_project_belongs_to_tenant(
+    project_id: str,
+    tenant_id: uuid.UUID,
+    session: AsyncSession,
+) -> str:
+    """
+    Verify that a project belongs to the tenant and return its customer_id.
+
+    Raises:
+        - HTTPException 404 if project does not exist or belongs to different tenant
+    """
+    result = await session.execute(
+        text("SELECT customer_id::text FROM projects WHERE id = :id"),
+        {"id": project_id},
+    )
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    
+    customer_id = row["customer_id"]
+    await verify_tenant_access(tenant_id, customer_id, session)
+    return customer_id
+
+
+async def verify_site_belongs_to_tenant(
+    site_id: str,
+    tenant_id: uuid.UUID,
+    session: AsyncSession,
+) -> str:
+    """
+    Verify that a site belongs to the tenant (via project) and return its customer_id.
+
+    Raises:
+        - HTTPException 404 if site does not exist or belongs to different tenant
+    """
+    result = await session.execute(
+        text("""
+            SELECT p.customer_id::text AS customer_id
+            FROM sites s
+            JOIN projects p ON p.id = s.project_id
+            WHERE s.id = :id
+        """),
+        {"id": site_id},
+    )
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Site not found")
+    
+    customer_id = row["customer_id"]
+    await verify_tenant_access(tenant_id, customer_id, session)
+    return customer_id
+
+
+async def verify_device_belongs_to_tenant(
+    device_id: str,
+    tenant_id: uuid.UUID,
+    session: AsyncSession,
+) -> str:
+    """
+    Verify that a device belongs to the tenant (via site → project) and return its customer_id.
+
+    Raises:
+        - HTTPException 404 if device does not exist or belongs to different tenant
+    """
+    result = await session.execute(
+        text("""
+            SELECT p.customer_id::text AS customer_id
+            FROM devices d
+            JOIN sites s ON s.id = d.site_id
+            JOIN projects p ON p.id = s.project_id
+            WHERE d.id = :id
+        """),
+        {"id": device_id},
+    )
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+    
+    customer_id = row["customer_id"]
+    await verify_tenant_access(tenant_id, customer_id, session)
+    return customer_id
+
+

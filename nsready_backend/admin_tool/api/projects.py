@@ -55,7 +55,26 @@ async def list_projects(
 
 
 @router.post("", response_model=ProjectOut)
-async def create_project(payload: ProjectIn, session: AsyncSession = Depends(get_session)):
+async def create_project(
+    payload: ProjectIn,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Create a new project.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can create projects for any customer.
+    - Customer (with X-Customer-ID): can only create projects under their own customer_id.
+
+    Phase 3: Write protection
+    """
+    # Phase 3: If tenant_id is present, verify payload.customer_id matches tenant
+    if tenant_id is not None:
+        # Validate UUID format for customer_id in payload
+        validate_uuid(payload.customer_id, field_name="customer_id")
+        await verify_tenant_access(tenant_id, payload.customer_id, session)
+    
     result = await session.execute(
         text(
             "INSERT INTO projects(customer_id, name, description) "
@@ -108,7 +127,45 @@ async def get_project(
 
 
 @router.put("/{project_id}", response_model=ProjectOut)
-async def update_project(project_id: str, payload: ProjectIn, session: AsyncSession = Depends(get_session)):
+async def update_project(
+    project_id: str,
+    payload: ProjectIn,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Update a project.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can update any project.
+    - Customer (with X-Customer-ID):
+        - Existing project must belong to tenant
+        - New customer_id (if changed) must match tenant
+
+    Phase 3: Write protection
+    """
+    # Validate UUID format (Phase 2)
+    validate_uuid(project_id, field_name="project_id")
+    validate_uuid(payload.customer_id, field_name="customer_id")
+    
+    # Phase 3: If tenant_id is present, verify access
+    if tenant_id is not None:
+        # First, verify the existing project belongs to tenant
+        result = await session.execute(
+            text("SELECT customer_id::text FROM projects WHERE id = :id"),
+            {"id": project_id},
+        )
+        existing = result.mappings().first()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Verify existing project belongs to tenant
+        await verify_tenant_access(tenant_id, existing["customer_id"], session)
+        
+        # Verify new customer_id (if changed) also belongs to tenant
+        if existing["customer_id"] != payload.customer_id:
+            await verify_tenant_access(tenant_id, payload.customer_id, session)
+    
     result = await session.execute(
         text(
             "UPDATE projects SET customer_id = :customer_id, name = :name, description = :description "
@@ -130,7 +187,34 @@ async def update_project(project_id: str, payload: ProjectIn, session: AsyncSess
 
 
 @router.delete("/{project_id}")
-async def delete_project(project_id: str, session: AsyncSession = Depends(get_session)):
+async def delete_project(
+    project_id: str,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Delete a project.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can delete any project.
+    - Customer (with X-Customer-ID): can only delete projects belonging to their tenant.
+
+    Phase 3: Write protection
+    """
+    # Validate UUID format (Phase 2)
+    validate_uuid(project_id, field_name="project_id")
+    
+    # Phase 3: If tenant_id is present, verify project belongs to tenant
+    if tenant_id is not None:
+        result = await session.execute(
+            text("SELECT customer_id::text FROM projects WHERE id = :id"),
+            {"id": project_id},
+        )
+        row = result.mappings().first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Project not found")
+        await verify_tenant_access(tenant_id, row["customer_id"], session)
+    
     result = await session.execute(text("DELETE FROM projects WHERE id = :id"), {"id": project_id})
     await session.commit()
     if result.rowcount == 0:

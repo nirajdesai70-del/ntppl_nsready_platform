@@ -5,7 +5,7 @@ from typing import Optional
 import uuid
 
 from core.db import get_session
-from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access, validate_uuid
+from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access, validate_uuid, verify_project_belongs_to_tenant, verify_site_belongs_to_tenant
 from api.models import SiteIn, SiteOut
 
 router = APIRouter(prefix="/sites", tags=["sites"], dependencies=[Depends(bearer_auth)])
@@ -57,7 +57,25 @@ async def list_sites(
 
 
 @router.post("", response_model=SiteOut)
-async def create_site(payload: SiteIn, session: AsyncSession = Depends(get_session)):
+async def create_site(
+    payload: SiteIn,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Create a new site.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can create sites under any project.
+    - Customer (with X-Customer-ID): can only create sites under projects belonging to their tenant.
+
+    Phase 3: Write protection
+    """
+    # Phase 3: If tenant_id is present, verify project belongs to tenant
+    if tenant_id is not None:
+        validate_uuid(payload.project_id, field_name="project_id")
+        await verify_project_belongs_to_tenant(payload.project_id, tenant_id, session)
+    
     import json
     result = await session.execute(
         text(
@@ -121,7 +139,41 @@ async def get_site(
 
 
 @router.put("/{site_id}", response_model=SiteOut)
-async def update_site(site_id: str, payload: SiteIn, session: AsyncSession = Depends(get_session)):
+async def update_site(
+    site_id: str,
+    payload: SiteIn,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Update a site.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can update any site.
+    - Customer (with X-Customer-ID):
+        - Existing site must belong to tenant
+        - New project_id (if changed) must belong to tenant
+
+    Phase 3: Write protection
+    """
+    # Validate UUID format (Phase 2)
+    validate_uuid(site_id, field_name="site_id")
+    validate_uuid(payload.project_id, field_name="project_id")
+    
+    # Phase 3: If tenant_id is present, verify access
+    if tenant_id is not None:
+        # First, verify the existing site belongs to tenant
+        await verify_site_belongs_to_tenant(site_id, tenant_id, session)
+        
+        # Verify new project_id (if changed) also belongs to tenant
+        result = await session.execute(
+            text("SELECT project_id::text FROM sites WHERE id = :id"),
+            {"id": site_id},
+        )
+        existing = result.mappings().first()
+        if existing and existing["project_id"] != payload.project_id:
+            await verify_project_belongs_to_tenant(payload.project_id, tenant_id, session)
+    
     import json
     result = await session.execute(
         text(
@@ -139,7 +191,27 @@ async def update_site(site_id: str, payload: SiteIn, session: AsyncSession = Dep
 
 
 @router.delete("/{site_id}")
-async def delete_site(site_id: str, session: AsyncSession = Depends(get_session)):
+async def delete_site(
+    site_id: str,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Delete a site.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can delete any site.
+    - Customer (with X-Customer-ID): can only delete sites belonging to their tenant.
+
+    Phase 3: Write protection
+    """
+    # Validate UUID format (Phase 2)
+    validate_uuid(site_id, field_name="site_id")
+    
+    # Phase 3: If tenant_id is present, verify site belongs to tenant
+    if tenant_id is not None:
+        await verify_site_belongs_to_tenant(site_id, tenant_id, session)
+    
     result = await session.execute(text("DELETE FROM sites WHERE id = :id"), {"id": site_id})
     await session.commit()
     if result.rowcount == 0:

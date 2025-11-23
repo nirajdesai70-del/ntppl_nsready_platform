@@ -5,7 +5,7 @@ from typing import Optional
 import uuid
 
 from core.db import get_session
-from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access, validate_uuid
+from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access, validate_uuid, verify_site_belongs_to_tenant, verify_device_belongs_to_tenant
 from api.models import DeviceIn, DeviceOut
 
 router = APIRouter(prefix="/devices", tags=["devices"], dependencies=[Depends(bearer_auth)])
@@ -58,7 +58,25 @@ async def list_devices(
 
 
 @router.post("", response_model=DeviceOut)
-async def create_device(payload: DeviceIn, session: AsyncSession = Depends(get_session)):
+async def create_device(
+    payload: DeviceIn,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Create a new device.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can create devices under any site.
+    - Customer (with X-Customer-ID): can only create devices under sites belonging to their tenant.
+
+    Phase 3: Write protection
+    """
+    # Phase 3: If tenant_id is present, verify site belongs to tenant
+    if tenant_id is not None:
+        validate_uuid(payload.site_id, field_name="site_id")
+        await verify_site_belongs_to_tenant(payload.site_id, tenant_id, session)
+    
     result = await session.execute(
         text(
             "INSERT INTO devices(site_id, name, device_type, external_id, status) "
@@ -130,7 +148,41 @@ async def get_device(
 
 
 @router.put("/{device_id}", response_model=DeviceOut)
-async def update_device(device_id: str, payload: DeviceIn, session: AsyncSession = Depends(get_session)):
+async def update_device(
+    device_id: str,
+    payload: DeviceIn,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Update a device.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can update any device.
+    - Customer (with X-Customer-ID):
+        - Existing device must belong to tenant
+        - New site_id (if changed) must belong to tenant
+
+    Phase 3: Write protection
+    """
+    # Validate UUID format (Phase 2)
+    validate_uuid(device_id, field_name="device_id")
+    validate_uuid(payload.site_id, field_name="site_id")
+    
+    # Phase 3: If tenant_id is present, verify access
+    if tenant_id is not None:
+        # First, verify the existing device belongs to tenant
+        await verify_device_belongs_to_tenant(device_id, tenant_id, session)
+        
+        # Verify new site_id (if changed) also belongs to tenant
+        result = await session.execute(
+            text("SELECT site_id::text FROM devices WHERE id = :id"),
+            {"id": device_id},
+        )
+        existing = result.mappings().first()
+        if existing and existing["site_id"] != payload.site_id:
+            await verify_site_belongs_to_tenant(payload.site_id, tenant_id, session)
+    
     result = await session.execute(
         text(
             "UPDATE devices SET site_id = :site_id, name = :name, device_type = :device_type, "
@@ -155,7 +207,27 @@ async def update_device(device_id: str, payload: DeviceIn, session: AsyncSession
 
 
 @router.delete("/{device_id}")
-async def delete_device(device_id: str, session: AsyncSession = Depends(get_session)):
+async def delete_device(
+    device_id: str,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Delete a device.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can delete any device.
+    - Customer (with X-Customer-ID): can only delete devices belonging to their tenant.
+
+    Phase 3: Write protection
+    """
+    # Validate UUID format (Phase 2)
+    validate_uuid(device_id, field_name="device_id")
+    
+    # Phase 3: If tenant_id is present, verify device belongs to tenant
+    if tenant_id is not None:
+        await verify_device_belongs_to_tenant(device_id, tenant_id, session)
+    
     result = await session.execute(text("DELETE FROM devices WHERE id = :id"), {"id": device_id})
     await session.commit()
     if result.rowcount == 0:

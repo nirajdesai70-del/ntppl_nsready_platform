@@ -52,7 +52,28 @@ async def list_customers(
 
 
 @router.post("", response_model=CustomerOut)
-async def create_customer(payload: CustomerIn, session: AsyncSession = Depends(get_session)):
+async def create_customer(
+    payload: CustomerIn,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Create a new customer.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can create any customer.
+    - Customer (with X-Customer-ID): cannot create customers (403).
+      (Customers are typically created by admins only.)
+
+    Phase 3: Write protection
+    """
+    # Phase 3: Customers with X-Customer-ID cannot create other customers
+    if tenant_id is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Customers cannot create other customer records",
+        )
+    
     import json
     result = await session.execute(
         text("INSERT INTO customers(name, metadata) VALUES (:name, CAST(:metadata AS jsonb)) RETURNING id::text, name, metadata, created_at"),
@@ -105,7 +126,28 @@ async def get_customer(
 
 
 @router.put("/{customer_id}", response_model=CustomerOut)
-async def update_customer(customer_id: str, payload: CustomerIn, session: AsyncSession = Depends(get_session)):
+async def update_customer(
+    customer_id: str,
+    payload: CustomerIn,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Update a customer.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can update any customer.
+    - Customer (with X-Customer-ID): can only update their own customer record.
+
+    Phase 3: Write protection
+    """
+    # Validate UUID format (Phase 2)
+    validate_uuid(customer_id, field_name="customer_id")
+    
+    # Phase 3: If tenant_id is present, verify this customer belongs to the tenant
+    if tenant_id is not None:
+        await verify_tenant_access(tenant_id, customer_id, session)
+    
     import json
     result = await session.execute(
         text(
@@ -122,7 +164,27 @@ async def update_customer(customer_id: str, payload: CustomerIn, session: AsyncS
 
 
 @router.delete("/{customer_id}")
-async def delete_customer(customer_id: str, session: AsyncSession = Depends(get_session)):
+async def delete_customer(
+    customer_id: str,
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    Delete a customer.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): can delete any customer.
+    - Customer (with X-Customer-ID): can only delete their own customer record.
+
+    Phase 3: Write protection
+    """
+    # Validate UUID format (Phase 2)
+    validate_uuid(customer_id, field_name="customer_id")
+    
+    # Phase 3: If tenant_id is present, verify this customer belongs to the tenant
+    if tenant_id is not None:
+        await verify_tenant_access(tenant_id, customer_id, session)
+    
     result = await session.execute(text("DELETE FROM customers WHERE id = :id"), {"id": customer_id})
     await session.commit()
     if result.rowcount == 0:
