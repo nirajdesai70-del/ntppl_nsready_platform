@@ -4,6 +4,13 @@
 **Status**: Ready to Paste  
 **Scope**: Phase 1.1 + `/admin/customers` endpoint only
 
+**Note:** This code uses **relative imports** matching the actual project structure:
+- `from core.db import get_session`
+- `from api.deps import ...`
+- `from api.models import ...`
+
+All imports have been verified against the actual codebase.
+
 ---
 
 ## Overview
@@ -103,6 +110,8 @@ from typing import Optional
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+
+# Note: status is already imported in your existing deps.py
 
 
 def get_bearer_token_from_env() -> str:
@@ -206,7 +215,9 @@ from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists
 from api.models import CustomerIn, CustomerOut
 ```
 
-**Note:** Make sure `status` is imported from `fastapi` (needed for `status.HTTP_404_NOT_FOUND`).
+**Note:** 
+- `status` is needed for `status.HTTP_404_NOT_FOUND` in the `list_customers` function
+- These imports use **relative imports** matching your actual project structure
 
 ### 2.2 Replace `list_customers` Function
 

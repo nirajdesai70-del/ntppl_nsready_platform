@@ -1,0 +1,323 @@
+collector_service  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+collector_service  |   File "uvloop/loop.pyx", line 2043, in create_connection
+collector_service  |   File "uvloop/loop.pyx", line 2020, in uvloop.loop.Loop.create_connection
+collector_service  | ConnectionRefusedError: [Errno 111] Connection refused
+collector_service  | 
+collector_service  | ERROR:    Application startup failed. Exiting.
+collector_service  | INFO:     Started server process [1]
+collector_service  | INFO:     Waiting for application startup.
+collector_service  | 2025-11-22 19:35:12,293 - app - INFO - Starting collector service...
+collector_service  | 2025-11-22 19:35:12,333 - app - INFO - Database connection verified
+collector_service  | 2025-11-22 19:35:12,335 - core.nats_client - INFO - Connected to NATS at nats:4222
+collector_service  | 2025-11-22 19:35:12,335 - app - INFO - NATS client connected
+collector_service  | 2025-11-22 19:35:12,335 - core.worker - INFO - Worker started, subscribed to ingress.events
+collector_service  | 2025-11-22 19:35:12,335 - app - INFO - Ingest worker started
+collector_service  | INFO:     Application startup complete.
+collector_service  | INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+collector_service  | INFO:     172.18.0.1:39902 - "GET /v1/health HTTP/1.1" 200 OK
+collector_service  | INFO:     172.18.0.1:39916 - "GET /v1/health HTTP/1.1" 200 OK
+collector_service  | INFO:     172.18.0.1:39922 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:39932 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:39948 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:39960 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:39962 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:39966 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:39972 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:39984 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:39990 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:40006 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | 2025-11-22 19:35:25,473 - api.ingest - INFO - Event queued: trace_id=f8944a06-cd5c-4756-a700-da71b54269c6, device_id=f8241d18-9d07-4cfb-bc71-d163842c1999, metrics=1
+collector_service  | INFO:     172.18.0.1:40020 - "POST /v1/ingest HTTP/1.1" 200 OK
+collector_service  | 2025-11-22 19:35:25,483 - api.ingest - INFO - Event queued: trace_id=9020f2af-9ea1-4666-a45f-ad34a1e2d111, device_id=f8241d18-9d07-4cfb-bc71-d163842c1999, metrics=1
+collector_service  | INFO:     172.18.0.1:40030 - "POST /v1/ingest HTTP/1.1" 200 OK
+collector_service  | INFO:     172.18.0.1:40046 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:40052 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | 2025-11-22 19:35:25,514 - core.worker - WARNING - Integrity error for trace_id=f8944a06-cd5c-4756-a700-da71b54269c6: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.ForeignKeyViolationError'>: insert or update on table "_hyper_1_1_chunk" violates foreign key constraint "1_2_ingest_events_parameter_key_fkey"
+collector_service  | DETAIL:  Key (parameter_key)=(project:00000000-0000-0000-0000-000000000000:nonexistent) is not present in table "parameter_templates".
+collector_service  | [SQL: 
+collector_service  |                         INSERT INTO ingest_events (
+collector_service  |                             time, device_id, parameter_key, value, quality, 
+collector_service  |                             source, event_id, attributes, created_at
+collector_service  |                         ) VALUES (
+collector_service  |                             $1, CAST($2 AS uuid), $3, $4, $5,
+collector_service  |                             $6, $7, CAST($8 AS jsonb), NOW()
+collector_service  |                         )
+collector_service  |                         ON CONFLICT (time, device_id, parameter_key) 
+collector_service  |                         DO UPDATE SET
+collector_service  |                             value = EXCLUDED.value,
+collector_service  |                             quality = EXCLUDED.quality,
+collector_service  |                             source = EXCLUDED.source,
+collector_service  |                             event_id = EXCLUDED.event_id,
+collector_service  |                             attributes = EXCLUDED.attributes
+collector_service  |                     ]
+collector_service  | [parameters: (datetime.datetime(2025, 1, 1, 0, 0, tzinfo=TzInfo(UTC)), 'f8241d18-9d07-4cfb-bc71-d163842c1999', 'project:00000000-0000-0000-0000-000000000000:nonexistent', 100.0, 192, 'GPRS', 'f8241d18-9d07-4cfb-bc71-d163842c1999:2025-01-01T00:00:00+00:00:project:00000000-0000-0000-0000-000000000000:nonexistent', '{}')]
+collector_service  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+collector_service  | INFO:     172.18.0.1:40068 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:40072 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | 2025-11-22 19:35:25,535 - core.worker - WARNING - Integrity error for trace_id=9020f2af-9ea1-4666-a45f-ad34a1e2d111: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.ForeignKeyViolationError'>: insert or update on table "_hyper_1_2_chunk" violates foreign key constraint "2_5_ingest_events_parameter_key_fkey"
+collector_service  | DETAIL:  Key (parameter_key)=(invalid-format) is not present in table "parameter_templates".
+collector_service  | [SQL: 
+collector_service  |                         INSERT INTO ingest_events (
+collector_service  |                             time, device_id, parameter_key, value, quality, 
+collector_service  |                             source, event_id, attributes, created_at
+collector_service  |                         ) VALUES (
+collector_service  |                             $1, CAST($2 AS uuid), $3, $4, $5,
+collector_service  |                             $6, $7, CAST($8 AS jsonb), NOW()
+collector_service  |                         )
+collector_service  |                         ON CONFLICT (time, device_id, parameter_key) 
+collector_service  |                         DO UPDATE SET
+collector_service  |                             value = EXCLUDED.value,
+collector_service  |                             quality = EXCLUDED.quality,
+collector_service  |                             source = EXCLUDED.source,
+collector_service  |                             event_id = EXCLUDED.event_id,
+collector_service  |                             attributes = EXCLUDED.attributes
+collector_service  |                     ]
+collector_service  | [parameters: (datetime.datetime(2025, 1, 1, 0, 0, tzinfo=TzInfo(UTC)), 'f8241d18-9d07-4cfb-bc71-d163842c1999', 'invalid-format', 100.0, 192, 'GPRS', 'f8241d18-9d07-4cfb-bc71-d163842c1999:2025-01-01T00:00:00+00:00:invalid-format', '{}')]
+admin_tool         |     async with original_context(app) as maybe_original_state:
+collector_service  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+collector_service  | INFO:     172.18.0.1:40076 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | INFO:     172.18.0.1:40082 - "POST /v1/ingest HTTP/1.1" 422 Unprocessable Entity
+collector_service  | 2025-11-22 19:35:25,567 - api.ingest - INFO - Event queued: trace_id=e8c1d8ba-56fb-480f-a4e3-e5a71a552ef0, device_id=00000000-0000-0000-0000-000000000999, metrics=1
+collector_service  | INFO:     172.18.0.1:40088 - "POST /v1/ingest HTTP/1.1" 200 OK
+collector_service  | 2025-11-22 19:35:25,590 - core.worker - WARNING - Integrity error for trace_id=e8c1d8ba-56fb-480f-a4e3-e5a71a552ef0: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.ForeignKeyViolationError'>: insert or update on table "_hyper_1_3_chunk" violates foreign key constraint "3_7_ingest_events_device_id_fkey"
+collector_service  | DETAIL:  Key (device_id)=(00000000-0000-0000-0000-000000000999) is not present in table "devices".
+collector_service  | [SQL: 
+collector_service  |                         INSERT INTO ingest_events (
+collector_service  |                             time, device_id, parameter_key, value, quality, 
+collector_service  |                             source, event_id, attributes, created_at
+collector_service  |                         ) VALUES (
+collector_service  |                             $1, CAST($2 AS uuid), $3, $4, $5,
+collector_service  |                             $6, $7, CAST($8 AS jsonb), NOW()
+collector_service  |                         )
+collector_service  |                         ON CONFLICT (time, device_id, parameter_key) 
+collector_service  |                         DO UPDATE SET
+collector_service  |                             value = EXCLUDED.value,
+collector_service  |                             quality = EXCLUDED.quality,
+nsready_db         |                  1001
+nsready_db         | (1 row)
+collector_service  |                             source = EXCLUDED.source,
+collector_service  |                             event_id = EXCLUDED.event_id,
+collector_service  |                             attributes = EXCLUDED.attributes
+collector_service  |                     ]
+collector_service  | [parameters: (datetime.datetime(2025, 1, 1, 0, 0, tzinfo=TzInfo(UTC)), '00000000-0000-0000-0000-000000000999', 'project:3a88b446-0ed4-4f5a-a809-6ca3ffd0e99b:voltage', 100.0, 192, 'GPRS', '00000000-0000-0000-0000-000000000999:2025-01-01T00:00:00+00:00:project:3a88b446-0ed4-4f5a-a809-6ca3ffd0e99b:voltage', '{}')]
+collector_service  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+nsready_db         | 
+nsready_db         | 
+nsready_db         | 
+nsready_db         | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/130_views.sql
+nsready_db         | CREATE VIEW
+nsready_db         | CREATE VIEW
+nsready_db         | 
+nsready_db         | 
+nsready_db         | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/140_registry_versions_enhancements.sql
+nsready_db         | ALTER TABLE
+nsready_db         | CREATE INDEX
+nsready_db         | 
+nsready_db         | 
+nsready_db         | /usr/local/bin/docker-entrypoint.sh: running /docker-entrypoint-initdb.d/150_customer_hierarchy.sql
+nsready_db         | ALTER TABLE
+nsready_db         | CREATE INDEX
+nsready_db         | COMMENT
+nsready_db         | 
+nsready_db         | 
+nsready_db         | waiting for server to shut down...2025-11-22 19:35:10.543 UTC [47] LOG:  received fast shutdown request
+nsready_db         | .2025-11-22 19:35:10.545 UTC [47] LOG:  aborting any active transactions
+nsready_nats       | [1] 2025/11/22 19:35:07.400760 [INF] Starting nats-server
+nsready_nats       | [1] 2025/11/22 19:35:07.400865 [INF]   Version:  2.10.29
+nsready_nats       | [1] 2025/11/22 19:35:07.400869 [INF]   Git:      [f91ddd8]
+nsready_nats       | [1] 2025/11/22 19:35:07.400872 [INF]   Name:     NCQ3M4RTSNQ44NVCEYY2IXGWF64737ZL7IXMD7D3NXTCD6O4TFW7JA2N
+nsready_nats       | [1] 2025/11/22 19:35:07.400876 [INF]   Node:     HKb5x5bc
+nsready_nats       | [1] 2025/11/22 19:35:07.400879 [INF]   ID:       NCQ3M4RTSNQ44NVCEYY2IXGWF64737ZL7IXMD7D3NXTCD6O4TFW7JA2N
+nsready_nats       | [1] 2025/11/22 19:35:07.401340 [INF] Starting http monitor on 0.0.0.0:8222
+nsready_nats       | [1] 2025/11/22 19:35:07.401466 [INF] Starting JetStream
+nsready_nats       | [1] 2025/11/22 19:35:07.401472 [WRN] Temporary storage directory used, data could be lost on system reboot
+nsready_nats       | [1] 2025/11/22 19:35:07.402273 [INF]     _ ___ _____ ___ _____ ___ ___   _   __  __
+nsready_nats       | [1] 2025/11/22 19:35:07.402346 [INF]  _ | | __|_   _/ __|_   _| _ \ __| /_\ |  \/  |
+nsready_nats       | [1] 2025/11/22 19:35:07.402398 [INF] | || | _|  | | \__ \ | | |   / _| / _ \| |\/| |
+nsready_nats       | [1] 2025/11/22 19:35:07.402443 [INF]  \__/|___| |_| |___/ |_| |_|_\___/_/ \_\_|  |_|
+nsready_nats       | [1] 2025/11/22 19:35:07.402486 [INF] 
+nsready_nats       | [1] 2025/11/22 19:35:07.402694 [INF]          https://docs.nats.io/jetstream
+nsready_db         | 2025-11-22 19:35:10.546 UTC [53] FATAL:  terminating background worker "TimescaleDB Background Worker Launcher" due to administrator command
+nsready_db         | 2025-11-22 19:35:10.548 UTC [65] FATAL:  terminating background worker "TimescaleDB Background Worker Scheduler" due to administrator command
+nsready_db         | 2025-11-22 19:35:10.551 UTC [47] LOG:  background worker "logical replication launcher" (PID 54) exited with exit code 1
+nsready_db         | 2025-11-22 19:35:10.551 UTC [47] LOG:  background worker "TimescaleDB Background Worker Scheduler" (PID 65) exited with exit code 1
+nsready_db         | 2025-11-22 19:35:10.551 UTC [47] LOG:  background worker "TimescaleDB Background Worker Launcher" (PID 53) exited with exit code 1
+nsready_db         | 2025-11-22 19:35:10.551 UTC [74] FATAL:  terminating background worker "TimescaleDB Background Worker Scheduler" due to administrator command
+nsready_db         | 2025-11-22 19:35:10.555 UTC [47] LOG:  background worker "TimescaleDB Background Worker Scheduler" (PID 74) exited with exit code 1
+nsready_db         | 2025-11-22 19:35:10.557 UTC [48] LOG:  shutting down
+nsready_db         | 2025-11-22 19:35:10.557 UTC [48] LOG:  checkpoint starting: shutdown immediate
+nsready_db         | 2025-11-22 19:35:10.605 UTC [48] LOG:  checkpoint complete: wrote 1755 buffers (10.7%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.040 s, sync=0.007 s, total=0.049 s; sync files=836, longest=0.001 s, average=0.001 s; distance=10039 kB, estimate=10039 kB
+nsready_db         | 2025-11-22 19:35:10.618 UTC [47] LOG:  database system is shut down
+nsready_db         |  done
+nsready_db         | server stopped
+nsready_db         | 
+nsready_db         | PostgreSQL init process complete; ready for start up.
+nsready_db         | 
+nsready_db         | 2025-11-22 19:35:10.741 UTC [1] LOG:  starting PostgreSQL 15.7 on x86_64-pc-linux-musl, compiled by gcc (Alpine 13.2.1_git20240309) 13.2.1 20240309, 64-bit
+nsready_db         | 2025-11-22 19:35:10.741 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+nsready_db         | 2025-11-22 19:35:10.741 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+nsready_db         | 2025-11-22 19:35:10.742 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+nsready_db         | 2025-11-22 19:35:10.745 UTC [101] LOG:  database system was shut down at 2025-11-22 19:35:10 UTC
+nsready_db         | 2025-11-22 19:35:10.771 UTC [1] LOG:  database system is ready to accept connections
+nsready_db         | 2025-11-22 19:35:10.772 UTC [104] LOG:  TimescaleDB background worker launcher connected to shared catalogs
+nsready_db         | 2025-11-22 19:35:25.509 UTC [111] ERROR:  insert or update on table "_hyper_1_1_chunk" violates foreign key constraint "1_2_ingest_events_parameter_key_fkey"
+nsready_db         | 2025-11-22 19:35:25.509 UTC [111] DETAIL:  Key (parameter_key)=(project:00000000-0000-0000-0000-000000000000:nonexistent) is not present in table "parameter_templates".
+nsready_db         | 2025-11-22 19:35:25.509 UTC [111] STATEMENT:  
+nsready_db         | 	                        INSERT INTO ingest_events (
+nsready_db         | 	                            time, device_id, parameter_key, value, quality, 
+nsready_db         | 	                            source, event_id, attributes, created_at
+nsready_db         | 	                        ) VALUES (
+nsready_db         | 	                            $1, CAST($2 AS uuid), $3, $4, $5,
+nsready_db         | 	                            $6, $7, CAST($8 AS jsonb), NOW()
+nsready_db         | 	                        )
+nsready_db         | 	                        ON CONFLICT (time, device_id, parameter_key) 
+nsready_db         | 	                        DO UPDATE SET
+nsready_db         | 	                            value = EXCLUDED.value,
+nsready_db         | 	                            quality = EXCLUDED.quality,
+nsready_db         | 	                            source = EXCLUDED.source,
+nsready_db         | 	                            event_id = EXCLUDED.event_id,
+nsready_db         | 	                            attributes = EXCLUDED.attributes
+nsready_db         | 	                    
+nsready_db         | 2025-11-22 19:35:25.531 UTC [111] ERROR:  insert or update on table "_hyper_1_2_chunk" violates foreign key constraint "2_5_ingest_events_parameter_key_fkey"
+nsready_db         | 2025-11-22 19:35:25.531 UTC [111] DETAIL:  Key (parameter_key)=(invalid-format) is not present in table "parameter_templates".
+nsready_db         | 2025-11-22 19:35:25.531 UTC [111] STATEMENT:  
+nsready_db         | 	                        INSERT INTO ingest_events (
+nsready_db         | 	                            time, device_id, parameter_key, value, quality, 
+nsready_db         | 	                            source, event_id, attributes, created_at
+nsready_db         | 	                        ) VALUES (
+nsready_db         | 	                            $1, CAST($2 AS uuid), $3, $4, $5,
+nsready_db         | 	                            $6, $7, CAST($8 AS jsonb), NOW()
+nsready_db         | 	                        )
+nsready_db         | 	                        ON CONFLICT (time, device_id, parameter_key) 
+nsready_db         | 	                        DO UPDATE SET
+nsready_db         | 	                            value = EXCLUDED.value,
+nsready_db         | 	                            quality = EXCLUDED.quality,
+nsready_db         | 	                            source = EXCLUDED.source,
+nsready_db         | 	                            event_id = EXCLUDED.event_id,
+nsready_db         | 	                            attributes = EXCLUDED.attributes
+nsready_db         | 	                    
+nsready_db         | 2025-11-22 19:35:25.584 UTC [111] ERROR:  insert or update on table "_hyper_1_3_chunk" violates foreign key constraint "3_7_ingest_events_device_id_fkey"
+nsready_db         | 2025-11-22 19:35:25.584 UTC [111] DETAIL:  Key (device_id)=(00000000-0000-0000-0000-000000000999) is not present in table "devices".
+nsready_db         | 2025-11-22 19:35:25.584 UTC [111] STATEMENT:  
+nsready_db         | 	                        INSERT INTO ingest_events (
+nsready_db         | 	                            time, device_id, parameter_key, value, quality, 
+nsready_db         | 	                            source, event_id, attributes, created_at
+nsready_db         | 	                        ) VALUES (
+nsready_db         | 	                            $1, CAST($2 AS uuid), $3, $4, $5,
+nsready_db         | 	                            $6, $7, CAST($8 AS jsonb), NOW()
+nsready_db         | 	                        )
+nsready_nats       | [1] 2025/11/22 19:35:07.402754 [INF] 
+nsready_nats       | [1] 2025/11/22 19:35:07.402761 [INF] ---------------- JETSTREAM ----------------
+nsready_nats       | [1] 2025/11/22 19:35:07.402766 [INF]   Max Memory:      11.72 GB
+nsready_nats       | [1] 2025/11/22 19:35:07.402770 [INF]   Max Storage:     13.22 GB
+nsready_nats       | [1] 2025/11/22 19:35:07.402772 [INF]   Store Directory: "/tmp/nats/jetstream"
+nsready_nats       | [1] 2025/11/22 19:35:07.402775 [INF] -------------------------------------------
+nsready_nats       | [1] 2025/11/22 19:35:07.403131 [INF] Listening for client connections on 0.0.0.0:4222
+nsready_nats       | [1] 2025/11/22 19:35:07.403342 [INF] Server is ready
+nsready_db         | 	                        ON CONFLICT (time, device_id, parameter_key) 
+nsready_db         | 	                        DO UPDATE SET
+nsready_db         | 	                            value = EXCLUDED.value,
+nsready_db         | 	                            quality = EXCLUDED.quality,
+nsready_db         | 	                            source = EXCLUDED.source,
+nsready_db         | 	                            event_id = EXCLUDED.event_id,
+nsready_db         | 	                            attributes = EXCLUDED.attributes
+nsready_db         | 	                    
+admin_tool         |   File "/usr/local/lib/python3.11/contextlib.py", line 210, in __aenter__
+admin_tool         |     return await anext(self.gen)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/fastapi/routing.py", line 133, in merged_lifespan
+admin_tool         |     async with original_context(app) as maybe_original_state:
+admin_tool         |   File "/usr/local/lib/python3.11/contextlib.py", line 210, in __aenter__
+admin_tool         |     return await anext(self.gen)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/app/app.py", line 16, in lifespan
+admin_tool         |     await healthcheck(engine)
+admin_tool         |   File "/app/core/db.py", line 26, in healthcheck
+admin_tool         |     async with engine.connect() as conn:
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/base.py", line 121, in __aenter__
+admin_tool         |     return await self.start(is_ctxmanager=True)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/ext/asyncio/engine.py", line 273, in start
+admin_tool         |     await greenlet_spawn(self.sync_engine.connect)
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+admin_tool         |     result = context.throw(*sys.exc_info())
+admin_tool         |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3278, in connect
+admin_tool         |     return self._connection_cls(self)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 146, in __init__
+admin_tool         |     self._dbapi_connection = engine.raw_connection()
+admin_tool         |                              ^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3302, in raw_connection
+admin_tool         |     return self.pool.connect()
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 449, in connect
+admin_tool         |     return _ConnectionFairy._checkout(self)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 1263, in _checkout
+admin_tool         |     fairy = _ConnectionRecord.checkout(pool)
+admin_tool         |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+admin_tool         |     rec = pool._do_get()
+admin_tool         |           ^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 179, in _do_get
+admin_tool         |     with util.safe_reraise():
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+admin_tool         |     raise exc_value.with_traceback(exc_tb)
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+admin_tool         |     return self._create_connection()
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 390, in _create_connection
+admin_tool         |     return _ConnectionRecord(self)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+admin_tool         |     self.__connect()
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+admin_tool         |     with util.safe_reraise():
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 146, in __exit__
+admin_tool         |     raise exc_value.with_traceback(exc_tb)
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+admin_tool         |     self.dbapi_connection = connection = pool._invoke_creator(self)
+admin_tool         |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/create.py", line 643, in connect
+admin_tool         |     return dialect.connect(*cargs, **cparams)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 621, in connect
+admin_tool         |     return self.loaded_dbapi.connect(*cargs, **cparams)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 949, in connect
+admin_tool         |     await_only(creator_fn(*arg, **kw)),
+admin_tool         |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+admin_tool         |     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+admin_tool         |     value = await result
+admin_tool         |             ^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/asyncpg/connection.py", line 2329, in connect
+admin_tool         |     return await connect_utils._connect(
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/asyncpg/connect_utils.py", line 1017, in _connect
+admin_tool         |     raise last_error or exceptions.TargetServerAttributeNotMatched(
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/asyncpg/connect_utils.py", line 991, in _connect
+admin_tool         |     conn = await _connect_addr(
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/asyncpg/connect_utils.py", line 828, in _connect_addr
+admin_tool         |     return await __connect_addr(params, True, *args)
+admin_tool         |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/asyncpg/connect_utils.py", line 873, in __connect_addr
+admin_tool         |     tr, pr = await connector
+admin_tool         |              ^^^^^^^^^^^^^^^
+admin_tool         |   File "/usr/local/lib/python3.11/site-packages/asyncpg/connect_utils.py", line 744, in _create_ssl_connection
+admin_tool         |     tr, pr = await loop.create_connection(
+admin_tool         |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+admin_tool         |   File "uvloop/loop.pyx", line 2043, in create_connection
+admin_tool         |   File "uvloop/loop.pyx", line 2020, in uvloop.loop.Loop.create_connection
+admin_tool         | ConnectionRefusedError: [Errno 111] Connection refused
+admin_tool         | 
+admin_tool         | ERROR:    Application startup failed. Exiting.
+admin_tool         | INFO:     Started server process [1]
+admin_tool         | INFO:     Waiting for application startup.
+admin_tool         | INFO:     Application startup complete.
+admin_tool         | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+admin_tool         | INFO:     172.18.0.1:60718 - "GET /health HTTP/1.1" 200 OK

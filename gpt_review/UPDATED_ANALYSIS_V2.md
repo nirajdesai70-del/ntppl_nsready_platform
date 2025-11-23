@@ -310,3 +310,4 @@ if 'docs/' in str(path) and any(kw in path.name.lower() or kw in str(path).lower
 
 **Recommendation:** Proceed with implementation as specified in prompt (only `docs/`, not `master_docs/`). If user wants `master_docs/` later, can easily add.
 
+

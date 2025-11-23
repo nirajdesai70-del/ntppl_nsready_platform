@@ -224,7 +224,7 @@ HTTP_ERRORS=0
 TIMEOUTS=0
 
 # Calculate interval between requests to achieve target RPS
-INTERVAL=$(awk "BEGIN{printf \"%.3f\", 1/$TARGET_RPS}")
+INTERVAL=$(echo "scale=3; 1 / $TARGET_RPS" | bc)
 
 echo "Sending events at target rate of ${TARGET_RPS} RPS (interval: ${INTERVAL}s)..." >> "$REPORT"
 echo "" >> "$REPORT"
@@ -264,7 +264,7 @@ EOF
   # Rate limiting: wait until next send time
   NOW=$(date +%s.%N)
   if (( $(echo "$NOW < $NEXT_SEND" | bc -l 2>/dev/null || echo "0") )); then
-    SLEEP_TIME=$(awk "BEGIN{printf \"%.3f\", $NEXT_SEND - $NOW}")
+    SLEEP_TIME=$(echo "scale=3; $NEXT_SEND - $NOW" | bc)
     sleep "$SLEEP_TIME"
   fi
   
@@ -276,10 +276,10 @@ EOF
   
   HTTP_CODE=$(echo "$RESP" | tail -2 | head -1)
   TIME_TOTAL=$(echo "$RESP" | tail -1)
-  RESP_BODY=$(echo "$RESP" | head -n -2)
+  RESP_BODY=$(echo "$RESP" | sed -e '$d' -e '$d')
   
   EVENT_COUNT=$((EVENT_COUNT + 1))
-  NEXT_SEND=$(awk "BEGIN{printf \"%.3f\", $NEXT_SEND + $INTERVAL}")
+  NEXT_SEND=$(echo "scale=3; $NEXT_SEND + $INTERVAL" | bc)
   
   if [ "$HTTP_CODE" = "200" ] && echo "$RESP_BODY" | grep -q "status.*queued"; then
     SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
@@ -296,7 +296,7 @@ EOF
   # Progress indicator every 100 events
   if [ $((EVENT_COUNT % 100)) -eq 0 ]; then
     ELAPSED=$(($(date +%s) - START_TIME))
-    CURRENT_RPS=$(awk "BEGIN{printf \"%.2f\", $EVENT_COUNT/$ELAPSED}")
+    CURRENT_RPS=$(echo "scale=2; $EVENT_COUNT / $ELAPSED" | bc)
     QD=$(get_queue_depth)
     echo "  Progress: $EVENT_COUNT/$TOTAL_EVENTS events, ${CURRENT_RPS} RPS, queue_depth=$QD"
   fi
@@ -349,7 +349,8 @@ echo "- Failed: $FAIL_COUNT" >> "$REPORT"
 echo "- HTTP errors: $HTTP_ERRORS" >> "$REPORT"
 echo "- Timeouts: $TIMEOUTS" >> "$REPORT"
 echo "- Actual duration: ${ACTUAL_DURATION}s" >> "$REPORT"
-echo "- Actual rate: $(awk "BEGIN{printf \"%.2f\", $EVENT_COUNT/$ACTUAL_DURATION}") events/sec" >> "$REPORT"
+ACTUAL_RPS=$(echo "scale=2; $EVENT_COUNT / $ACTUAL_DURATION" | bc)
+echo "- Actual rate: ${ACTUAL_RPS} events/sec" >> "$REPORT"
 echo "- Target rate: ${TARGET_RPS} events/sec" >> "$REPORT"
 echo "" >> "$REPORT"
 
@@ -388,24 +389,27 @@ echo "" >> "$REPORT"
 
 # ================== SUMMARY ==================
 
-SUCCESS_RATE=$(awk "BEGIN{printf \"%.2f\", ($SUCCESS_COUNT/$EVENT_COUNT)*100}")
+SUCCESS_RATE=$(echo "scale=2; ($SUCCESS_COUNT * 100) / $EVENT_COUNT" | bc)
+SUCCESS_RATE_INT=${SUCCESS_RATE%.*}
+ACTUAL_RPS_FINAL=$(echo "scale=2; $EVENT_COUNT / $ACTUAL_DURATION" | bc)
+TARGET_RPS_90=$(echo "scale=2; $TARGET_RPS * 0.9" | bc)
 
 cat >> "$REPORT" <<EOF
 
 ## Summary
 
-**Test Status**: $(if [ $SUCCESS_RATE -ge 95 ] && [ "$DRAINED" = true ]; then echo "✅ **PASSED**"; else echo "⚠️  **ISSUES DETECTED**"; fi)
+**Test Status**: $(if [ $SUCCESS_RATE_INT -ge 95 ] && [ "$DRAINED" = true ]; then echo "✅ **PASSED**"; else echo "⚠️  **ISSUES DETECTED**"; fi)
 
 **Key Findings**:
 - Success rate: ${SUCCESS_RATE}%
-- Throughput: $(awk "BEGIN{printf \"%.2f\", $EVENT_COUNT/$ACTUAL_DURATION}") events/sec
+- Throughput: ${ACTUAL_RPS_FINAL} events/sec
 - Queue stability: $(if [ "$DRAINED" = true ]; then echo "✅ Queue drained successfully"; else echo "⚠️  Queue did not drain"; fi)
 - Data integrity: $(if [ $INSERTED -gt 0 ]; then echo "✅ Data inserted correctly"; else echo "❌ No data inserted"; fi)
 
 **Recommendations**:
-$(if [ $SUCCESS_RATE -lt 95 ]; then echo "- ⚠️  Success rate below 95%, investigate failures"; fi)
+$(if [ $SUCCESS_RATE_INT -lt 95 ]; then echo "- ⚠️  Success rate below 95%, investigate failures"; fi)
 $(if [ "$DRAINED" != true ]; then echo "- ⚠️  Consider increasing worker pool size or batch processing capacity"; fi)
-$(if [ $(awk "BEGIN{printf \"%.2f\", $EVENT_COUNT/$ACTUAL_DURATION}") -lt $((TARGET_RPS * 9 / 10)) ]; then echo "- ⚠️  Actual rate below target, system may be under stress"; fi)
+$(if [ "$(echo "$ACTUAL_RPS_FINAL < $TARGET_RPS_90" | bc -l)" = "1" ]; then echo "- ⚠️  Actual rate below target, system may be under stress"; fi)
 - Monitor queue depth during production load
 - Consider horizontal scaling if sustained high load expected
 
