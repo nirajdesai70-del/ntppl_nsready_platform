@@ -1,21 +1,57 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from typing import Optional
+import uuid
 
 from core.db import get_session
-from api.deps import bearer_auth
+from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists
 from api.models import SiteIn, SiteOut
 
 router = APIRouter(prefix="/sites", tags=["sites"], dependencies=[Depends(bearer_auth)])
 
 
 @router.get("", response_model=list[SiteOut])
-async def list_sites(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(
-        text(
-            "SELECT id::text, project_id::text AS project_id, name, location, created_at "
-            "FROM sites ORDER BY created_at DESC"
+async def list_sites(
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    List sites.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): return all sites (current behaviour).
+    - Customer (with X-Customer-ID): return only that customer's sites (via projects).
+
+    Filtering: sites → projects → customers
+    """
+    # Engineer/Admin mode: no tenant filter
+    if tenant_id is None:
+        result = await session.execute(
+            text(
+                "SELECT id::text, project_id::text AS project_id, name, location, created_at "
+                "FROM sites ORDER BY created_at DESC"
+            )
         )
+        return [SiteOut(**row) for row in result.mappings().all()]
+
+    # Customer mode: tenant_id must exist
+    if not await verify_customer_exists(tenant_id, session):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Customer {tenant_id} not found",
+        )
+
+    # Filter by tenant (sites → projects → customers)
+    result = await session.execute(
+        text("""
+            SELECT s.id::text, s.project_id::text AS project_id, s.name, s.location, s.created_at
+            FROM sites s
+            JOIN projects p ON p.id = s.project_id
+            WHERE p.customer_id = :customer_id
+            ORDER BY s.created_at DESC
+        """),
+        {"customer_id": str(tenant_id)},
     )
     return [SiteOut(**row) for row in result.mappings().all()]
 

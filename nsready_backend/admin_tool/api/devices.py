@@ -1,21 +1,58 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
+from typing import Optional
+import uuid
 
 from core.db import get_session
-from api.deps import bearer_auth
+from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists
 from api.models import DeviceIn, DeviceOut
 
 router = APIRouter(prefix="/devices", tags=["devices"], dependencies=[Depends(bearer_auth)])
 
 
 @router.get("", response_model=list[DeviceOut])
-async def list_devices(session: AsyncSession = Depends(get_session)):
-    result = await session.execute(
-        text(
-            "SELECT id::text, site_id::text AS site_id, name, device_type, external_id, status, created_at "
-            "FROM devices ORDER BY created_at DESC"
+async def list_devices(
+    tenant_id: Optional[uuid.UUID] = Depends(get_tenant_customer_id),
+    session: AsyncSession = Depends(get_session),
+):
+    """
+    List devices.
+
+    Behaviour:
+    - Engineer/Admin (no X-Customer-ID): return all devices (current behaviour).
+    - Customer (with X-Customer-ID): return only that customer's devices (via sites → projects).
+
+    Filtering: devices → sites → projects → customers
+    """
+    # Engineer/Admin mode: no tenant filter
+    if tenant_id is None:
+        result = await session.execute(
+            text(
+                "SELECT id::text, site_id::text AS site_id, name, device_type, external_id, status, created_at "
+                "FROM devices ORDER BY created_at DESC"
+            )
         )
+        return [DeviceOut(**row) for row in result.mappings().all()]
+
+    # Customer mode: tenant_id must exist
+    if not await verify_customer_exists(tenant_id, session):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Customer {tenant_id} not found",
+        )
+
+    # Filter by tenant (devices → sites → projects → customers)
+    result = await session.execute(
+        text("""
+            SELECT d.id::text, d.site_id::text AS site_id, d.name, d.device_type, d.external_id, d.status, d.created_at
+            FROM devices d
+            JOIN sites s ON s.id = d.site_id
+            JOIN projects p ON p.id = s.project_id
+            WHERE p.customer_id = :customer_id
+            ORDER BY d.created_at DESC
+        """),
+        {"customer_id": str(tenant_id)},
     )
     return [DeviceOut(**row) for row in result.mappings().all()]
 
