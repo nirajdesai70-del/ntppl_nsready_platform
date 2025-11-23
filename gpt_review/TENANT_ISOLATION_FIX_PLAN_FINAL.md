@@ -36,6 +36,16 @@ This plan provides a **phased, test-driven approach** to implementing tenant iso
 * Should preserve performance (indexes / query tuning as needed)
 * Should allow rollback per endpoint (small commits, feature flags if needed)
 
+### Error Code Policy
+
+For consistency across all endpoints, we use the following policy:
+
+* **Invalid UUID format** → `400 Bad Request`
+* **Resource doesn't exist at all** → `404 Not Found`
+* **Resource exists but not in this tenant** → `404 Not Found` (to avoid user enumeration and hide tenant boundaries in error messages)
+
+This means `verify_tenant_access()` will consistently raise `404` when a resource belongs to another tenant, not `403`. Tests should be updated to expect `404` for cross-tenant access attempts.
+
 ---
 
 ## 1. Test Mapping (What We're Fixing)
@@ -73,6 +83,10 @@ From `test_tenant_isolation.sh`:
 #### 2.1 Tenant Header Handling (Shared Dependency)
 
 **File:** `nsready_backend/admin_tool/api/deps.py`
+
+**Note:** Adjust import paths (`from api.deps` vs `from .deps`) to match the actual package layout in your project. The examples below use relative imports (`from .deps`), but you may need absolute imports depending on your structure.
+
+**Important:** All DB helpers (`verify_customer_exists`, `verify_tenant_access`) are `async` and use `AsyncSession`, matching existing patterns in admin_tool. These are not simple sync helpers.
 
 Create/refine dependency functions:
 
@@ -155,10 +169,11 @@ async def verify_tenant_access(
         )
     
     # Verify tenant access
+    # Policy: Return 404 (not 403) to avoid user enumeration and hide tenant boundaries
     if str(tenant_id) != resource_customer_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied - resource does not belong to your tenant"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resource not found"
         )
 ```
 
@@ -233,7 +248,7 @@ async def list_customers(
 * If Engineer (no header) → can read any existing customer
 * If Customer:
   * If `{id}` is their own → 200
-  * If `{id}` is another tenant's → 403 or 404 (choose and stick to it)
+  * If `{id}` is another tenant's → 404 (per error code policy)
 * If `{id}` invalid UUID → 400 (Phase 2 finalizes this)
 
 **Implementation:**
@@ -253,7 +268,7 @@ async def get_customer(
     - If X-Customer-ID header is provided: Verify customer_id matches tenant (test 2)
     - If X-Customer-ID header is missing: Allow access (engineer mode)
     - If customer_id doesn't exist: Return 404
-    - If tenant doesn't have access: Return 403 (test 2)
+    - If tenant doesn't have access: Return 404 (per error code policy, test 2)
     """
     # Get customer from DB
     result = await session.execute(
@@ -481,7 +496,7 @@ For each `GET /resource/{id}`:
 
 * Validate UUID with `validate_uuid()`
 * If resource doesn't exist → 404
-* If tenant header present and resource belongs to a different customer → 404 or 403 (consistent with Phase 1 choice)
+* If tenant header present and resource belongs to a different customer → 404 (per error code policy)
 
 **Pattern:**
 ```python
@@ -613,7 +628,7 @@ fi
 
 **Mitigation:**
 * Preserve Engineer/Admin global visibility
-* Use a feature flag (e.g. `ENABLE_TENANT_FILTERS`) for initial rollout
+* **Feature Flag Implementation:** Implement `ENABLE_TENANT_FILTERING` in a central settings module (e.g., environment variable or config), and check it in `get_tenant_customer_id()` and/or in the list endpoints. That way we can turn filtering on/off per environment without patching each route.
 * Roll out per endpoint (customers → projects → sites → devices)
 
 ### Performance
@@ -629,7 +644,7 @@ fi
 
 ## 7. How to Execute Practically
 
-**Recommended cadence:**
+### 7.1 Recommended Cadence
 
 * **Week 1:**
   * Phase 1.1–1.5 (customers, projects, sites, devices)
@@ -643,11 +658,41 @@ fi
   * Phase 3 (writes & exports) if needed for your tenant model
   * Phase 4 (CI policy) once behaviour is stable
 
-**Each endpoint change:**
+### 7.2 Low-Risk Starting Approach
+
+**Start very small to minimize risk:**
+
+1. **Implement Phase 1.1 + `/admin/customers` only:**
+   * Add `get_tenant_customer_id`, `verify_customer_exists`, `verify_tenant_access` to `deps.py`
+   * Wire into `GET /admin/customers` and `GET /admin/customers/{id}` only
+   * Run `./shared/scripts/test_tenant_isolation.sh` and `test_roles_access.sh`
+   * Commit: `fix: add tenant filters to customers endpoints`
+
+2. **Pause and review:**
+   * Confirm behaviour is correct for:
+     * Engineer (no header) → sees all customers
+     * Customer with header → sees only own customer
+   * Check that nothing weird shows up in CI or local flows
+   * Verify no breaking changes for existing consumers
+
+3. **Then continue incrementally:**
+   * Projects → Sites → Devices (one at a time)
+
+This keeps the risk **very low** and gives you time to see if any existing consumers are depending on "global" behaviour on the customer endpoints.
+
+### 7.3 Each Endpoint Change Process
+
+**For each endpoint change:**
 
 1. Implement filter/validation
 2. Run `test_tenant_isolation.sh` and `test_roles_access.sh`
-3. Commit with a small message:
+3. Test manually:
+   * Engineer mode (no header)
+   * Customer mode (with `X-Customer-ID`)
+   * Invalid UUID (should return 400)
+   * Non-existent resource (should return 404)
+   * Cross-tenant access (should return 404)
+4. Commit with a small message:
    * `"fix: add tenant filter to GET /admin/customers"`
    * `"fix: enforce UUID validation on GET /admin/customers/{id}"`
 
@@ -673,11 +718,33 @@ This makes rollback trivial if anything misbehaves.
 
 ## 9. Next Steps
 
+### 9.1 Immediate Next Step
+
+**Recommended:** Start with **just** `GET /admin/customers` endpoint:
+
+1. Implement Phase 1.1 (Infrastructure Setup)
+2. Wire tenant filtering into `GET /admin/customers` and `GET /admin/customers/{id}` only
+3. Validate with test suite
+4. Review and confirm behaviour
+5. Then proceed to other endpoints incrementally
+
+This gives you a working example and validates the approach before expanding to other endpoints.
+
+### 9.2 General Execution Steps
+
 1. **Review this plan** and adjust as needed
 2. **Start Phase 1.1** (Infrastructure Setup - Day 1)
-3. **Commit after each endpoint fix** for easy rollback
-4. **Validate with test suite** after each change
-5. **Stop after any phase** if priorities change
+3. **Start with customers endpoint only** (low-risk first move)
+4. **Commit after each endpoint fix** for easy rollback
+5. **Validate with test suite** after each change
+6. **Stop after any phase** if priorities change
+
+### 9.3 Getting Exact Code
+
+If you want help turning the plan snippets into **exact code** that fits your current file layout (imports, models, types), we can:
+- Review your actual `customers.py` structure
+- Generate exact code ready to paste
+- Ensure imports match your package layout
 
 ---
 
