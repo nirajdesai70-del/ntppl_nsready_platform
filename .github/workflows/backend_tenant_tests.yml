@@ -26,9 +26,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    env:
+      # Set default environment variables for docker-compose.yml
+      POSTGRES_DB: nsready
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: nsready_password
+      APP_ENV: test
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Create .env file for docker-compose
+        run: |
+          cat > .env << EOF
+          APP_ENV=${{ env.APP_ENV }}
+          POSTGRES_DB=${{ env.POSTGRES_DB }}
+          POSTGRES_USER=${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_HOST=db
+          POSTGRES_PORT=5432
+          NATS_URL=nats://nats:4222
+          EOF
+
+      - name: Stop any existing stack (ignore errors)
+        run: docker compose down || echo "No previous stack to stop, continuing"
 
       - name: Start Docker Compose stack
         run: |
@@ -76,5 +98,5 @@ jobs:
 
       - name: Stop Docker Compose stack
         if: always()
-        run: docker compose down
+        run: docker compose down || echo "Failed to stop stack, continuing"
 
