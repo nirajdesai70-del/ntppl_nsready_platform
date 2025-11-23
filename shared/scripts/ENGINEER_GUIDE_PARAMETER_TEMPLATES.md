@@ -21,7 +21,7 @@ This guide will help you define parameters (measurements/data points) for each s
 Run this command to see all available customers and projects:
 
 ```bash
-./scripts/list_customers_projects.sh
+./shared/scripts/list_customers_projects.sh
 ```
 
 **Important:** Copy the names EXACTLY as they appear (including spaces and capitalization).
@@ -39,7 +39,7 @@ Demo Customer,Demo Project
 **Option A: Start from Example (Recommended)**
 
 ```bash
-cp scripts/example_parameters.csv my_project_parameters.csv
+cp shared/scripts/example_parameters.csv my_project_parameters.csv
 ```
 
 Then open `my_project_parameters.csv` in Excel, Google Sheets, or any text editor.
@@ -47,7 +47,7 @@ Then open `my_project_parameters.csv` in Excel, Google Sheets, or any text edito
 **Option B: Start from Template**
 
 ```bash
-cp scripts/parameter_template_template.csv my_project_parameters.csv
+cp shared/scripts/parameter_template_template.csv my_project_parameters.csv
 ```
 
 **Option C: Export Existing and Modify**
@@ -55,10 +55,10 @@ cp scripts/parameter_template_template.csv my_project_parameters.csv
 If you want to see existing parameters first:
 
 ```bash
-./scripts/export_parameter_template_csv.sh
+./shared/scripts/export_parameter_template_csv.sh
 ```
 
-This creates a file in `reports/` folder. You can edit it and add more parameters.
+This creates a file in `nsready_backend/tests/reports/` folder. You can edit it and add more parameters.
 
 ### Step 3: Fill in Your CSV
 
@@ -82,7 +82,7 @@ Customer 02,Project 01_Customer_02,Power,kW,float,0,100,false,Power consumption
 Once your CSV is ready, import it:
 
 ```bash
-./scripts/import_parameter_templates.sh my_project_parameters.csv
+./shared/scripts/import_parameter_templates.sh my_project_parameters.csv
 ```
 
 You'll see output like:
@@ -251,7 +251,7 @@ For the `required` column, use:
 
 **Solution:**
 1. Use a different parameter name
-2. Or check existing parameters: `./scripts/export_parameter_template_csv.sh`
+2. Or check existing parameters: `./shared/scripts/export_parameter_template_csv.sh`
 
 ### CSV Format Errors
 
@@ -283,13 +283,13 @@ Let's say you want to add parameters for "Customer 02":
 
 ### Step 1: Get Exact Names
 ```bash
-./scripts/list_customers_projects.sh
+./shared/scripts/list_customers_projects.sh
 ```
 Output shows: `Customer 02,Project 01_Customer_02`
 
 ### Step 2: Create CSV
 ```bash
-cp scripts/example_parameters.csv customer02_params.csv
+cp shared/scripts/example_parameters.csv customer02_params.csv
 ```
 
 ### Step 3: Edit CSV
@@ -309,7 +309,7 @@ Customer 02,Project 01_Customer_02,Power,kW,float,0,100,false,Power consumption
 
 ### Step 5: Verify
 ```bash
-./scripts/export_parameter_template_csv.sh
+./shared/scripts/export_parameter_template_csv.sh
 ```
 Check the exported file to confirm your parameters were created.
 
@@ -342,7 +342,7 @@ Check the exported file to confirm your parameters were created.
 2. Verify customer/project names match exactly
 3. Check CSV format (9 columns, proper commas)
 4. Review the examples in this guide
-5. Check `scripts/create_parameter_csv_guide.md` for more details
+5. Check `shared/scripts/create_parameter_csv_guide.md` for more details
 
 ---
 
@@ -360,5 +360,34 @@ Before importing your CSV, make sure:
 
 ---
 
-**Ready to start?** Run `./scripts/list_customers_projects.sh` and begin creating your CSV file!
+**Ready to start?** Run `./shared/scripts/list_customers_projects.sh` and begin creating your CSV file!
+
+---
+
+### Backend Testing (Standard Process)
+
+Backend test procedures are now maintained centrally in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md` (full SOP)
+- `nsready_backend/tests/README_BACKEND_TESTS_QUICK.md` (operator quick view)
+
+**Key commands (from repository root):**
+
+```bash
+cd /Users/nirajdesai/Documents/Projects/NTPPL_NSREADY_Platforms/ntppl_nsready_platform
+
+./shared/scripts/test_data_flow.sh
+./shared/scripts/test_batch_ingestion.sh --count 100
+./shared/scripts/test_stress_load.sh
+```
+
+All reports are stored under:
+
+```text
+nsready_backend/tests/reports/
+```
+
+For detailed negative, roles, multi-customer, tenant, SCADA, and final-drive tests, see the Extended Test Suite section in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md`
 

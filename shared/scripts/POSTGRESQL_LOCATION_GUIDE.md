@@ -238,8 +238,8 @@ kubectl get configmap -n nsready-tier2 nsready-config -o jsonpath='{.data.POSTGR
 Backups are stored separately from the database:
 
 **Docker Compose:**
-- Use backup scripts in `scripts/backups/`
-- Backups typically saved to `reports/` or specified directory
+- Use backup scripts in `shared/scripts/` (if available)
+- Backups typically saved to `nsready_backend/tests/reports/` or specified directory
 
 **Kubernetes:**
 - CronJob: `postgres-backup` (runs daily at 2 AM)
@@ -250,7 +250,7 @@ Backups are stored separately from the database:
 
 ```bash
 # Manual backup (Docker Compose)
-./scripts/backups/backup_pg.sh
+# Use pg_dump or docker exec (see commands above)
 
 # Manual backup (Kubernetes)
 kubectl exec -n nsready-tier2 nsready-db-0 -- pg_dump -U postgres nsready > backup.sql
@@ -383,7 +383,36 @@ kubectl describe pod -n nsready-tier2 nsready-db-0 | grep -A 5 Mounts
 2. **Locate your data** using the appropriate method
 3. **Set up backups** if not already configured
 4. **Monitor storage usage** regularly
-5. **For SCADA integration**, see `SCADA_INTEGRATION_GUIDE.md`
+5. **For SCADA integration**, see `shared/scripts/SCADA_INTEGRATION_GUIDE.md`
+
+---
+
+### Backend Testing (Standard Process)
+
+Backend test procedures are now maintained centrally in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md` (full SOP)
+- `nsready_backend/tests/README_BACKEND_TESTS_QUICK.md` (operator quick view)
+
+**Key commands (from repository root):**
+
+```bash
+cd /Users/nirajdesai/Documents/Projects/NTPPL_NSREADY_Platforms/ntppl_nsready_platform
+
+./shared/scripts/test_data_flow.sh
+./shared/scripts/test_batch_ingestion.sh --count 100
+./shared/scripts/test_stress_load.sh
+```
+
+All reports are stored under:
+
+```text
+nsready_backend/tests/reports/
+```
+
+For detailed negative, roles, multi-customer, tenant, SCADA, and final-drive tests, see the Extended Test Suite section in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md`
 
 
 

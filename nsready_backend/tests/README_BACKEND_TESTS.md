@@ -436,6 +436,52 @@ For complete test scripts documentation and additional test scenarios, see:
 
 ---
 
+## 11. Backend Test Matrix
+
+This matrix summarizes all backend test scripts, the reports they generate, what they validate, and when they should be run.
+
+> All commands are run from the repository root:
+>
+> ```bash
+> cd /Users/nirajdesai/Documents/Projects/NTPPL_NSREADY_Platforms/ntppl_nsready_platform
+> ```
+
+### 11.1 Baseline Set (strict gate)
+
+| # | Script | Report Prefix | Purpose | When to Run | Criticality |
+|---|--------|---------------|---------|-------------|-------------|
+| 1 | `./shared/scripts/test_data_flow.sh` | `DATA_FLOW_TEST_*.md` | Core DB + pipeline connectivity, registry usage, end-to-end sanity. | Every backend change / PR. | 🔴 High |
+| 2 | `./shared/scripts/test_batch_ingestion.sh --count 100` | `BATCH_INGESTION_TEST_*.md` | Batch ingestion behaviour, queue drain, throughput sanity. | After ingestion/queue changes. | 🔴 High |
+| 3 | `./shared/scripts/test_stress_load.sh` | `STRESS_LOAD_TEST_*.md` | Behaviour under load: queue depth, rates, basic resilience. | Before major releases. | 🟠 Medium–High |
+
+### 11.2 Extended Functional Tests
+
+| # | Script | Report Prefix | Purpose | When to Run | Notes |
+|---|--------|---------------|---------|-------------|-------|
+| 4 | `./shared/scripts/test_negative_cases.sh` | `NEGATIVE_TEST_*.md` | Validation & error handling (422s, malformed JSON, bad types, error hygiene). | After validation changes, schema updates, error handling tweaks. | ⚠️ Known warnings: non-existent device_id & oversized payload behaviour. |
+| 5 | `./shared/scripts/test_roles_access.sh` | `ROLES_ACCESS_TEST_*.md` | RBAC for Engineer vs Customer on /admin endpoints. | After auth/RBAC changes. | ⚠️ Known warning: customer cross-tenant access currently returns 200 instead of 403. |
+| 6 | `./shared/scripts/test_multi_customer_flow.sh` | `MULTI_CUSTOMER_FLOW_TEST_*.md` | Multi-customer data flow and basic tenant separation. | Before enabling multi-customer scenarios; after routing changes. | Warnings if some customers have no parameters. |
+| 7 | `./shared/scripts/test_tenant_isolation.sh` | `TENANT_ISOLATION_TEST_*.md` | Deep tenant isolation checks on customers/projects + export API. | For tenant design reviews and security checks. | ❌ Currently exposes real multi-tenant gaps; fails when run standalone. |
+| 8 | `./shared/scripts/test_scada_connection.sh` | `SCADA_CONNECTION_TEST_*.md` | SCADA DB connectivity and views (`v_scada_latest`, `v_scada_history`) under Docker Compose. | After SCADA/DB changes. | Uses `docker exec` into `nsready_db`. |
+| 9 | `./shared/scripts/final_test_drive.sh` | `FINAL_TEST_DRIVE_*.md` | Full "final drive" against a Kubernetes environment (pods, port-forwards, health, API). | Before major releases in K8s-enabled environments. | K8s-only; in CI (no K8s) treated as informational. |
+
+### 11.3 Standard Run Sets
+
+- **Baseline Set (for every PR):**  
+  - `test_data_flow.sh`  
+  - `test_batch_ingestion.sh --count 100`  
+  - `test_stress_load.sh`
+
+- **Extended Diagnostics (manual, local or CI):**  
+  - Baseline Set + all Extended Functional Tests  
+  - Use `Backend Extended Tests (Manual)` workflow in CI.
+
+- **K8s Final Drive (staging/prod validation):**  
+  - Baseline + Extended + `final_test_drive.sh` against a real cluster.  
+  - Consider making Final Test Drive a hard gate only when K8s configuration is stable.
+
+---
+
 ## 12. CI Integration – Backend Baseline Tests
 
 The backend Baseline Set tests are also wired into GitHub Actions.

@@ -27,15 +27,15 @@ Import the hierarchical structure: **Customers → Projects → Sites → Device
 
 ### Files Required
 
-1. **Sample Template File**: `scripts/registry_template.csv`
+1. **Sample Template File**: `shared/scripts/registry_template.csv`
    - Template showing the required CSV format
    - Use this as a starting point for your data
 
-2. **Example File**: `scripts/example_registry.csv`
+2. **Example File**: `shared/scripts/example_registry.csv`
    - Example with sample data
    - Shows how to structure your data
 
-3. **Import Script**: `scripts/import_registry.sh`
+3. **Import Script**: `shared/scripts/import_registry.sh`
    - Script that processes the CSV and creates registry entries
 
 ### CSV Format
@@ -73,7 +73,7 @@ Acme Corp,Factory Monitoring System,Real-time monitoring,Main Factory,{"city":"M
 
 ```bash
 # Import registry data
-./scripts/import_registry.sh my_registry_data.csv
+./shared/scripts/import_registry.sh my_registry_data.csv
 ```
 
 ### Important Notes
@@ -93,15 +93,15 @@ Import **parameter templates** that define what measurements can be collected fo
 
 ### Files Required
 
-1. **Sample Template File**: `scripts/parameter_template_template.csv`
+1. **Sample Template File**: `shared/scripts/parameter_template_template.csv`
    - Template showing the required CSV format
    - Use this as a starting point
 
-2. **Example File**: `scripts/example_parameters.csv`
+2. **Example File**: `shared/scripts/example_parameters.csv`
    - Example with sample data
    - Shows different parameter types
 
-3. **Import Script**: `scripts/import_parameter_templates.sh`
+3. **Import Script**: `shared/scripts/import_parameter_templates.sh`
    - Script that processes the CSV and creates parameter templates
 
 ### CSV Format
@@ -140,7 +140,7 @@ Acme Corp,Factory Monitoring System,Power,kW,float,0,100,false,Power consumption
 
 ```bash
 # Import parameter templates
-./scripts/import_parameter_templates.sh my_parameters.csv
+./shared/scripts/import_parameter_templates.sh my_parameters.csv
 ```
 
 ### Important Notes
@@ -186,27 +186,27 @@ customer_name,project_name,parameter_name,unit,dtype,min_value,max_value,require
 
 ```bash
 # Step 1: Import registry (customers, projects, sites, devices)
-./scripts/import_registry.sh scripts/example_registry.csv
+./shared/scripts/import_registry.sh shared/scripts/example_registry.csv
 
 # Step 2: Import parameters for the projects
-./scripts/import_parameter_templates.sh scripts/example_parameters.csv
+./shared/scripts/import_parameter_templates.sh shared/scripts/example_parameters.csv
 ```
 
 ### Export Existing Data
 
 ```bash
 # Export existing parameter templates (for editing)
-./scripts/export_parameter_template_csv.sh
+./shared/scripts/export_parameter_template_csv.sh
 
 # Export full registry data (read-only, for reference)
-./scripts/export_registry_data.sh
+./shared/scripts/export_registry_data.sh
 ```
 
 ### Verify Import
 
 ```bash
 # List customers and projects
-./scripts/list_customers_projects.sh
+./shared/scripts/list_customers_projects.sh
 ```
 
 ---
@@ -329,26 +329,55 @@ Before importing, verify:
 
 ## File Locations
 
-All files are located in the `scripts/` directory:
+All files are located in the `shared/scripts/` directory:
 
 ### Template Files
-- `scripts/registry_template.csv` - Registry import template
-- `scripts/parameter_template_template.csv` - Parameter import template
+- `shared/scripts/registry_template.csv` - Registry import template
+- `shared/scripts/parameter_template_template.csv` - Parameter import template
 
 ### Example Files
-- `scripts/example_registry.csv` - Example registry data
-- `scripts/example_parameters.csv` - Example parameter data
+- `shared/scripts/example_registry.csv` - Example registry data
+- `shared/scripts/example_parameters.csv` - Example parameter data
 
 ### Scripts
-- `scripts/import_registry.sh` - Import registry data
-- `scripts/import_parameter_templates.sh` - Import parameters
-- `scripts/export_parameter_template_csv.sh` - Export parameters
-- `scripts/export_registry_data.sh` - Export registry (read-only)
+- `shared/scripts/import_registry.sh` - Import registry data
+- `shared/scripts/import_parameter_templates.sh` - Import parameters
+- `shared/scripts/export_parameter_template_csv.sh` - Export parameters
+- `shared/scripts/export_registry_data.sh` - Export registry (read-only)
 
 ### Documentation
-- `scripts/CONFIGURATION_IMPORT_USER_GUIDE.md` - This guide
-- `scripts/PARAMETER_TEMPLATE_IMPORT_GUIDE.md` - Detailed parameter guide
-- `scripts/ENGINEER_GUIDE_PARAMETER_TEMPLATES.md` - Engineer's guide
+- `shared/scripts/CONFIGURATION_IMPORT_USER_GUIDE.md` - This guide
+- `shared/scripts/PARAMETER_TEMPLATE_IMPORT_GUIDE.md` - Detailed parameter guide
+- `shared/scripts/ENGINEER_GUIDE_PARAMETER_TEMPLATES.md` - Engineer's guide
+
+---
+
+### Backend Testing (Standard Process)
+
+Backend test procedures are now maintained centrally in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md` (full SOP)
+- `nsready_backend/tests/README_BACKEND_TESTS_QUICK.md` (operator quick view)
+
+**Key commands (from repository root):**
+
+```bash
+cd /Users/nirajdesai/Documents/Projects/NTPPL_NSREADY_Platforms/ntppl_nsready_platform
+
+./shared/scripts/test_data_flow.sh
+./shared/scripts/test_batch_ingestion.sh --count 100
+./shared/scripts/test_stress_load.sh
+```
+
+All reports are stored under:
+
+```text
+nsready_backend/tests/reports/
+```
+
+For detailed negative, roles, multi-customer, tenant, SCADA, and final-drive tests, see the Extended Test Suite section in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md`
 
 ---
 

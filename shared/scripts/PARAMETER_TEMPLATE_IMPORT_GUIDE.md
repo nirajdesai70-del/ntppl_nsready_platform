@@ -43,21 +43,21 @@ Customer 02,Project 01_Customer_02,Humidity,%,float,0,100,false,Relative humidit
 To see the current format or export existing templates for editing:
 
 ```bash
-./scripts/export_parameter_template_csv.sh
+./shared/scripts/export_parameter_template_csv.sh
 ```
 
-This creates a CSV file in the `reports/` folder with all existing parameter templates.
+This creates a CSV file in the `nsready_backend/tests/reports/` folder with all existing parameter templates.
 
 ### Step 2: Create/Edit CSV File
 
 **Quick Start:**
-1. Get exact customer/project names: `./scripts/list_customers_projects.sh`
-2. Use the template: `scripts/parameter_template_template.csv` or `scripts/example_parameters.csv`
-3. Or export existing: `./scripts/export_parameter_template_csv.sh`
+1. Get exact customer/project names: `./shared/scripts/list_customers_projects.sh`
+2. Use the template: `shared/scripts/parameter_template_template.csv` or `shared/scripts/example_parameters.csv`
+3. Or export existing: `./shared/scripts/export_parameter_template_csv.sh`
 4. Fill in your parameter definitions
 
 **Detailed Instructions:**
-See `scripts/create_parameter_csv_guide.md` for step-by-step instructions with examples.
+See `shared/scripts/create_parameter_csv_guide.md` for step-by-step instructions with examples.
 
 **Important Notes:**
 - Customer and project names must match exactly what's in the database (use `list_customers_projects.sh` to get exact names)
@@ -68,12 +68,12 @@ See `scripts/create_parameter_csv_guide.md` for step-by-step instructions with e
 ### Step 3: Import CSV File
 
 ```bash
-./scripts/import_parameter_templates.sh <path_to_csv_file>
+./shared/scripts/import_parameter_templates.sh <path_to_csv_file>
 ```
 
 Example:
 ```bash
-./scripts/import_parameter_templates.sh my_parameters.csv
+./shared/scripts/import_parameter_templates.sh my_parameters.csv
 ```
 
 The script will:
@@ -141,7 +141,36 @@ Each parameter template stores metadata as JSON:
 
 ## Related Scripts
 
-- `export_parameter_template_csv.sh` - Export existing templates to CSV
-- `import_parameter_templates.sh` - Import CSV to create templates
-- `export_registry_data.sh` - Export full registry data including parameters
+- `shared/scripts/export_parameter_template_csv.sh` - Export existing templates to CSV
+- `shared/scripts/import_parameter_templates.sh` - Import CSV to create templates
+- `shared/scripts/export_registry_data.sh` - Export full registry data including parameters
+
+---
+
+### Backend Testing (Standard Process)
+
+Backend test procedures are now maintained centrally in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md` (full SOP)
+- `nsready_backend/tests/README_BACKEND_TESTS_QUICK.md` (operator quick view)
+
+**Key commands (from repository root):**
+
+```bash
+cd /Users/nirajdesai/Documents/Projects/NTPPL_NSREADY_Platforms/ntppl_nsready_platform
+
+./shared/scripts/test_data_flow.sh
+./shared/scripts/test_batch_ingestion.sh --count 100
+./shared/scripts/test_stress_load.sh
+```
+
+All reports are stored under:
+
+```text
+nsready_backend/tests/reports/
+```
+
+For detailed negative, roles, multi-customer, tenant, SCADA, and final-drive tests, see the Extended Test Suite section in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md`
 

@@ -13,12 +13,12 @@ This guide explains two approaches for integrating NSREADY platform data with yo
 
 Export latest SCADA values to text file:
 ```bash
-./scripts/export_scada_data.sh --latest --format txt
+./shared/scripts/export_scada_data.sh --latest --format txt
 ```
 
 Export full history to CSV:
 ```bash
-./scripts/export_scada_data.sh --history --format csv
+./shared/scripts/export_scada_data.sh --history --format csv
 ```
 
 ### Available Views for Export
@@ -46,7 +46,7 @@ Export full history to CSV:
 For more readable exports with device names and parameter names instead of IDs:
 
 ```bash
-./scripts/export_scada_data_readable.sh --latest --format txt
+./shared/scripts/export_scada_data_readable.sh --latest --format txt
 ```
 
 This script joins with device and parameter template tables to provide human-readable names.
@@ -333,7 +333,7 @@ For production environments requiring real-time synchronization:
 
 1. **Test file export:**
    ```bash
-   ./scripts/export_scada_data.sh --latest --format txt
+   ./shared/scripts/export_scada_data.sh --latest --format txt
    ```
 
 2. **Test direct connection:**
@@ -341,6 +341,35 @@ For production environments requiring real-time synchronization:
    - Test connection from SCADA system
 
 3. **Choose integration method** based on your SCADA system capabilities and requirements
+
+---
+
+### Backend Testing (Standard Process)
+
+Backend test procedures are now maintained centrally in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md` (full SOP)
+- `nsready_backend/tests/README_BACKEND_TESTS_QUICK.md` (operator quick view)
+
+**Key commands (from repository root):**
+
+```bash
+cd /Users/nirajdesai/Documents/Projects/NTPPL_NSREADY_Platforms/ntppl_nsready_platform
+
+./shared/scripts/test_data_flow.sh
+./shared/scripts/test_batch_ingestion.sh --count 100
+./shared/scripts/test_stress_load.sh
+```
+
+All reports are stored under:
+
+```text
+nsready_backend/tests/reports/
+```
+
+For detailed negative, roles, multi-customer, tenant, SCADA, and final-drive tests, see the Extended Test Suite section in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md`
 
 
 

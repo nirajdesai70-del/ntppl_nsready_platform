@@ -26,7 +26,7 @@ You can create the CSV file in three ways:
 
 1. Copy the template:
    ```bash
-   cp scripts/parameter_template_template.csv my_parameters.csv
+   cp shared/scripts/parameter_template_template.csv my_parameters.csv
    ```
 
 2. Open `my_parameters.csv` in Excel, Google Sheets, or any text editor
@@ -46,7 +46,7 @@ Then add your data rows below.
 #### Option C: Export Existing and Modify
 
 ```bash
-./scripts/export_parameter_template_csv.sh
+./shared/scripts/export_parameter_template_csv.sh
 ```
 
 This creates a CSV with existing templates. You can:
@@ -158,7 +158,7 @@ awk -F',' 'NR==1 {print "Header columns: " NF} NR>1 {if (NF != 9) print "Row " N
 Once your CSV is ready:
 
 ```bash
-./scripts/import_parameter_templates.sh my_parameters.csv
+./shared/scripts/import_parameter_templates.sh my_parameters.csv
 ```
 
 The script will tell you:
@@ -194,6 +194,35 @@ If you get errors during import:
 2. Verify customer/project names match exactly
 3. Check CSV format (correct number of columns)
 4. Make sure there are no special characters causing issues
+
+---
+
+### Backend Testing (Standard Process)
+
+Backend test procedures are now maintained centrally in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md` (full SOP)
+- `nsready_backend/tests/README_BACKEND_TESTS_QUICK.md` (operator quick view)
+
+**Key commands (from repository root):**
+
+```bash
+cd /Users/nirajdesai/Documents/Projects/NTPPL_NSREADY_Platforms/ntppl_nsready_platform
+
+./shared/scripts/test_data_flow.sh
+./shared/scripts/test_batch_ingestion.sh --count 100
+./shared/scripts/test_stress_load.sh
+```
+
+All reports are stored under:
+
+```text
+nsready_backend/tests/reports/
+```
+
+For detailed negative, roles, multi-customer, tenant, SCADA, and final-drive tests, see the Extended Test Suite section in:
+
+- `nsready_backend/tests/README_BACKEND_TESTS.md`
 
 
 
