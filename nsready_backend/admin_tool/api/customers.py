@@ -5,7 +5,7 @@ from typing import Optional
 import uuid
 
 from core.db import get_session
-from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access
+from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access, validate_uuid
 from api.models import CustomerIn, CustomerOut
 
 router = APIRouter(prefix="/customers", tags=["customers"], dependencies=[Depends(bearer_auth)])
@@ -77,11 +77,17 @@ async def get_customer(
     - Customer (with X-Customer-ID):
         - If this is their own ID: 200
         - If other tenant: 404
+    - If customer_id invalid UUID: 400 (Phase 2)
     - If customer_id does not exist: 404
 
     Tests:
     - Test 2: Customer A blocked from Customer B.
+    - Test 4: Invalid UUID format rejected (400).
+    - Test 5: Non-existent customer rejected (404).
     """
+    # Validate UUID format (Phase 2)
+    validate_uuid(customer_id, field_name="customer_id")
+
     # Fetch the customer
     result = await session.execute(
         text("SELECT id::text, name, metadata, created_at FROM customers WHERE id = :id"),

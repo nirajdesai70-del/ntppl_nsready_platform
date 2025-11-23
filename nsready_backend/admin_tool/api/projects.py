@@ -5,7 +5,7 @@ from typing import Optional
 import uuid
 
 from core.db import get_session
-from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists
+from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access, validate_uuid
 from api.models import ProjectIn, ProjectOut
 
 router = APIRouter(prefix="/projects", tags=["projects"], dependencies=[Depends(bearer_auth)])
@@ -82,8 +82,12 @@ async def get_project(
     - Customer (with X-Customer-ID):
         - If this project belongs to their customer: 200
         - If other tenant: 404
+    - If project_id invalid UUID: 400 (Phase 2)
     - If project_id does not exist: 404
     """
+    # Validate UUID format (Phase 2)
+    validate_uuid(project_id, field_name="project_id")
+
     # Fetch the project
     result = await session.execute(
         text(
@@ -98,7 +102,6 @@ async def get_project(
 
     # If tenant_id is present, verify this project belongs to the tenant
     if tenant_id is not None:
-        from api.deps import verify_tenant_access
         await verify_tenant_access(tenant_id, row["customer_id"], session)
 
     return ProjectOut(**row)

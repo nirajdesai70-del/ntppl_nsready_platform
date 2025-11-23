@@ -5,7 +5,7 @@ from typing import Optional
 import uuid
 
 from core.db import get_session
-from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists
+from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access, validate_uuid
 from api.models import SiteIn, SiteOut
 
 router = APIRouter(prefix="/sites", tags=["sites"], dependencies=[Depends(bearer_auth)])
@@ -85,8 +85,12 @@ async def get_site(
     - Customer (with X-Customer-ID):
         - If this site belongs to their customer (via project): 200
         - If other tenant: 404
+    - If site_id invalid UUID: 400 (Phase 2)
     - If site_id does not exist: 404
     """
+    # Validate UUID format (Phase 2)
+    validate_uuid(site_id, field_name="site_id")
+
     # Fetch the site with its project's customer_id
     result = await session.execute(
         text("""
@@ -104,7 +108,6 @@ async def get_site(
 
     # If tenant_id is present, verify this site belongs to the tenant
     if tenant_id is not None:
-        from api.deps import verify_tenant_access
         await verify_tenant_access(tenant_id, row["customer_id"], session)
 
     # Return site data (without customer_id in response)

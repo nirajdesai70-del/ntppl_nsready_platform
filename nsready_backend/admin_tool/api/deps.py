@@ -83,3 +83,19 @@ async def verify_tenant_access(
         )
 
 
+def validate_uuid(uuid_str: str, field_name: str = "ID") -> uuid.UUID:
+    """
+    Validate UUID format and return UUID object.
+
+    Raises:
+        - HTTPException 400 if UUID format is invalid
+    """
+    try:
+        return uuid.UUID(uuid_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid UUID format for {field_name}: {uuid_str}",
+        )
+
+

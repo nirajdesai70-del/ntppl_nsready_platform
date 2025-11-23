@@ -5,7 +5,7 @@ from typing import Optional
 import uuid
 
 from core.db import get_session
-from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists
+from api.deps import bearer_auth, get_tenant_customer_id, verify_customer_exists, verify_tenant_access, validate_uuid
 from api.models import DeviceIn, DeviceOut
 
 router = APIRouter(prefix="/devices", tags=["devices"], dependencies=[Depends(bearer_auth)])
@@ -91,8 +91,12 @@ async def get_device(
     - Customer (with X-Customer-ID):
         - If this device belongs to their customer (via site → project): 200
         - If other tenant: 404
+    - If device_id invalid UUID: 400 (Phase 2)
     - If device_id does not exist: 404
     """
+    # Validate UUID format (Phase 2)
+    validate_uuid(device_id, field_name="device_id")
+
     # Fetch the device with its project's customer_id (via site)
     result = await session.execute(
         text("""
@@ -111,7 +115,6 @@ async def get_device(
 
     # If tenant_id is present, verify this device belongs to the tenant
     if tenant_id is not None:
-        from api.deps import verify_tenant_access
         await verify_tenant_access(tenant_id, row["customer_id"], session)
 
     # Return device data (without customer_id in response)
