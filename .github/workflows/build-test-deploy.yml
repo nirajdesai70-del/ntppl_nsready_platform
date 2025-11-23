@@ -157,6 +157,7 @@ jobs:
             echo "⚠️  KUBECONFIG secret not set; skipping deployment"
             exit 0
           fi
+          mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
           kubectl config set-context --current --namespace=nsready-tier2
           kubectl cluster-info
