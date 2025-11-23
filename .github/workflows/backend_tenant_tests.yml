@@ -1,0 +1,80 @@
+name: Backend Tenant Isolation Tests
+
+# NOTE / INTENT
+# ----------------------------------------------------------------------------------
+# This workflow runs the tenant isolation tests as a STRICT GATE for code merges.
+#
+# It is the PRIMARY place where tenant isolation correctness is enforced in CI.
+# Any change to tenant isolation behavior should pass this workflow.
+#
+# This workflow is separate from backend_extended_tests.yml (which is manual
+# and diagnostic) and backend_tests.yml (which runs baseline data flow tests).
+#
+# When tenant isolation is stable and correct, this workflow should be:
+# - Required for PR merges (GitHub branch protection)
+# - Green on all PRs targeting main
+# ----------------------------------------------------------------------------------
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  tenant-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start Docker Compose stack
+        run: |
+          docker compose up -d
+          docker compose ps
+
+      - name: Wait for nsready_db to be ready
+        run: |
+          set -e
+          for i in {1..30}; do
+            if docker exec nsready_db pg_isready -U postgres -d nsready > /dev/null 2>&1; then
+              echo "nsready_db is ready."
+              exit 0
+            fi
+            echo "Waiting for nsready_db... (attempt $i/30)"
+            sleep 5
+          done
+          echo "nsready_db not ready in time."
+          exit 1
+
+      - name: Seed registry database
+        run: |
+          docker exec -i nsready_db psql -U postgres -d nsready < nsready_backend/db/seed_registry.sql
+
+      - name: Make scripts executable
+        run: chmod +x shared/scripts/*.sh
+
+      - name: Run tenant isolation tests
+        run: |
+          set -e
+          echo "========================================="
+          echo "Running Tenant Isolation Tests"
+          echo "========================================="
+          ./shared/scripts/test_tenant_isolation.sh
+          echo ""
+          echo "✅ Tenant isolation tests passed"
+
+      - name: Upload tenant isolation test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-isolation-test-reports
+          path: nsready_backend/tests/reports/TENANT_ISOLATION_TEST_*.md
+          retention-days: 30
+
+      - name: Stop Docker Compose stack
+        if: always()
+        run: docker compose down
+

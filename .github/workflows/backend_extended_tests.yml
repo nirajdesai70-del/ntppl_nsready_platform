@@ -3,13 +3,18 @@
 # This workflow runs EXTENDED backend tests (tenant, roles, negative, etc.)
 # It is manually triggered only (workflow_dispatch) for full regression runs.
 #
-# Baseline Set tests (data flow, batch, stress) are run automatically in:
-#   - .github/workflows/backend_tests.yml (on push/PR)
+# Test Workflow Structure:
+#   - backend_tests.yml: Baseline Set (data flow, batch, stress) - automatic on push/PR
+#   - backend_tenant_tests.yml: Tenant isolation tests - automatic on push/PR (strict gate)
+#   - backend_extended_tests.yml: Full diagnostic suite - manual only
 #
 # Use this workflow for:
 #   - Pre-release full regression
-#   - Tenant isolation validation
+#   - Comprehensive diagnostic runs
 #   - Extended test coverage before major milestones
+#
+# Note: Tenant isolation tests are run here for completeness, but the primary
+# tenant isolation gate is backend_tenant_tests.yml (which runs automatically).
 # ----------------------------------------------------------------------------------
 
 name: Backend Extended Tests (Manual)
@@ -198,8 +203,10 @@ jobs:
           echo ""
           echo "▶️  Test 4/6: Tenant Isolation Test"
           echo "----------------------------------------"
-          # Tenant isolation test - known gaps in current backend behavior
-          # Allow it to fail without failing the workflow (informational only)
+          # Tenant isolation test - run for diagnostic completeness
+          # Note: The primary tenant isolation gate is backend_tenant_tests.yml (runs on push/PR)
+          # This extended workflow runs it for full regression coverage, but allows it to fail
+          # without blocking the diagnostic workflow (since backend_tenant_tests.yml is the strict gate)
           set +e
           ./shared/scripts/test_tenant_isolation.sh
           TENANT_RC=$?
@@ -208,9 +215,9 @@ jobs:
           if [ "$TENANT_RC" -ne 0 ]; then
             echo ""
             echo "⚠️  Tenant isolation test failed (exit code: $TENANT_RC)"
-            echo "   This indicates KNOWN LIMITATIONS in current backend tenant isolation behavior."
+            echo "   Note: Tenant isolation is also checked in backend_tenant_tests.yml (strict gate on push/PR)."
             echo "   See the TENANT_ISOLATION_TEST_*.md report for detailed findings."
-            echo "   The workflow continues - this is informational, not a blocker."
+            echo "   The extended workflow continues - this is informational for diagnostic purposes."
             echo ""
           fi
           
