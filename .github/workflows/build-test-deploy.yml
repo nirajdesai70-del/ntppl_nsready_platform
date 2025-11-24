@@ -297,4 +297,42 @@ jobs:
           exit 1
         continue-on-error: false
 
+      - name: R17 regression test (non-blocking)
+        if: success()
+        continue-on-error: true
+        run: |
+          set -e
+          echo "🧪 Running R17 regression test..."
+          
+          # Ensure cluster is reachable
+          if ! kubectl cluster-info > /dev/null 2>&1; then
+            echo "⚠️  Cluster not reachable; skipping R17 test"
+            exit 0
+          fi
+          
+          echo "Setting up port-forwards..."
+          kubectl port-forward deployment/admin-tool -n nsready-tier2 8000:8000 > /tmp/admin-pf.log 2>&1 &
+          PF_ADMIN=$!
+          
+          kubectl port-forward deployment/collector-service -n nsready-tier2 8001:8001 > /tmp/collector-pf.log 2>&1 &
+          PF_COLLECTOR=$!
+          
+          sleep 5
+          
+          cleanup() {
+            echo "Cleaning up port-forwards..."
+            kill $PF_ADMIN $PF_COLLECTOR 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          
+          CI_CORR_ID="ci-r17-$(date +%s)-${GITHUB_RUN_ID:-manual}"
+          
+          CI_MODE=1 \
+          CI_CORRELATION_ID="$CI_CORR_ID" \
+          ADMIN_BASE_URL=http://localhost:8000 \
+          COLLECTOR_BASE_URL=http://localhost:8001 \
+          ./tools/test_r17_rule.sh || echo "⚠️  R17 regression test failed (non-blocking)"
+          
+          echo "✅ R17 regression test step completed"
+
 
